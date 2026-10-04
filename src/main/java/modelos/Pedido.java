@@ -1,7 +1,6 @@
 package modelos;
 
-import java.util.HashSet;
-import java.util.Set;
+import java.time.LocalDate;
 import java.util.UUID;
 
 import jakarta.persistence.Column;
@@ -9,7 +8,8 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
-import jakarta.persistence.ManyToMany;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.EqualsAndHashCode;
@@ -19,14 +19,14 @@ import lombok.Setter;
 import lombok.ToString;
 
 @Entity
-@Table(name = "categoria")
+@Table(name = "pedido")
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @EqualsAndHashCode(onlyExplicitlyIncluded = true)
 @ToString
-public class Categoria {
+public class Pedido {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
@@ -34,12 +34,20 @@ public class Categoria {
     @EqualsAndHashCode.Include
     private UUID id;
 
-    @Column(name = "nombre", nullable = false, length = 100)
-    private String nombre;
+    @Column(name = "estado", length = 50)
+    private String estado;
 
-    @Column(name = "disponible", nullable = false)
-    private boolean disponible;
+    @Column(name = "fecha")
+    private LocalDate fecha;
 
-    @ManyToMany(mappedBy = "categorias")
-    private Set<Producto> productos = new HashSet<>();
+    @Column(name = "turno", length = 50)
+    private String turno;
+
+    @ManyToOne
+    @JoinColumn(name = "cliente_id", nullable = false)
+    private Cliente cliente;
+
+    @ManyToOne
+    @JoinColumn(name = "cupon_id")
+    private Cupon cupon;
 }

@@ -1,7 +1,5 @@
 package modelos;
 
-import java.util.HashSet;
-import java.util.Set;
 import java.util.UUID;
 
 import jakarta.persistence.Column;
@@ -9,7 +7,7 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
-import jakarta.persistence.ManyToMany;
+import jakarta.persistence.OneToOne;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.EqualsAndHashCode;
@@ -19,14 +17,14 @@ import lombok.Setter;
 import lombok.ToString;
 
 @Entity
-@Table(name = "categoria")
+@Table(name = "usuario")
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @EqualsAndHashCode(onlyExplicitlyIncluded = true)
 @ToString
-public class Categoria {
+public class Usuario {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
@@ -34,12 +32,15 @@ public class Categoria {
     @EqualsAndHashCode.Include
     private UUID id;
 
-    @Column(name = "nombre", nullable = false, length = 100)
-    private String nombre;
+    @Column(name = "rol", nullable = false, length = 50)
+    private String rol;
 
-    @Column(name = "disponible", nullable = false)
-    private boolean disponible;
+    @Column(name = "mail", nullable = false, unique = true, length = 150)
+    private String mail;
 
-    @ManyToMany(mappedBy = "categorias")
-    private Set<Producto> productos = new HashSet<>();
+    @Column(name = "contrasena", nullable = false, length = 255)
+    private String contrasena;
+
+    @OneToOne(mappedBy = "usuario")
+    private Cliente cliente;
 }

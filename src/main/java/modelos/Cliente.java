@@ -1,7 +1,7 @@
 package modelos;
 
-import java.util.HashSet;
-import java.util.Set;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
 import jakarta.persistence.Column;
@@ -9,7 +9,9 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
-import jakarta.persistence.ManyToMany;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.OneToMany;
+import jakarta.persistence.OneToOne;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.EqualsAndHashCode;
@@ -19,14 +21,14 @@ import lombok.Setter;
 import lombok.ToString;
 
 @Entity
-@Table(name = "categoria")
+@Table(name = "cliente")
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @EqualsAndHashCode(onlyExplicitlyIncluded = true)
 @ToString
-public class Categoria {
+public class Cliente {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
@@ -34,12 +36,19 @@ public class Categoria {
     @EqualsAndHashCode.Include
     private UUID id;
 
-    @Column(name = "nombre", nullable = false, length = 100)
+    @Column(name = "nombre", nullable = false, length = 150)
     private String nombre;
 
-    @Column(name = "disponible", nullable = false)
-    private boolean disponible;
+    @Column(name = "mail", nullable = false, unique = true, length = 150)
+    private String mail;
 
-    @ManyToMany(mappedBy = "categorias")
-    private Set<Producto> productos = new HashSet<>();
+    @Column(name = "dni", nullable = false, unique = true, length = 20)
+    private String dni;
+
+    @OneToOne
+    @JoinColumn(name = "usuario_id", unique = true)
+    private Usuario usuario;
+
+    @OneToMany(mappedBy = "cliente")
+    private List<Pedido> pedidos = new ArrayList<>();
 }

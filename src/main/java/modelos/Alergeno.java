@@ -19,14 +19,14 @@ import lombok.Setter;
 import lombok.ToString;
 
 @Entity
-@Table(name = "categoria")
+@Table(name = "alergeno")
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @EqualsAndHashCode(onlyExplicitlyIncluded = true)
 @ToString
-public class Categoria {
+public class Alergeno {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
@@ -37,9 +37,6 @@ public class Categoria {
     @Column(name = "nombre", nullable = false, length = 100)
     private String nombre;
 
-    @Column(name = "disponible", nullable = false)
-    private boolean disponible;
-
-    @ManyToMany(mappedBy = "categorias")
+    @ManyToMany(mappedBy = "alergenos")
     private Set<Producto> productos = new HashSet<>();
 }
