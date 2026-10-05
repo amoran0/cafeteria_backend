@@ -1,0 +1,4 @@
+cambiar los list<objetcs> creando las dto
+terminar consultas a la bd 
+revisar que los campos de las tablas esten correctos
+hacer test
