@@ -35,7 +35,7 @@ public class Pedido {
     private UUID id;
 
     @Column(name = "estado", length = 50)
-    private String estado;
+    private Enum<EstadoPedido>  estado;
 
     @Column(name = "fecha")
     private LocalDate fecha;
