@@ -26,14 +26,11 @@ import lombok.ToString;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-@EqualsAndHashCode(onlyExplicitlyIncluded = true)
-@ToString
 public class Cliente {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     @Column(name = "id", nullable = false, updatable = false, columnDefinition = "uuid")
-    @EqualsAndHashCode.Include
     private UUID id;
 
     @Column(name = "nombre", nullable = false, length = 150)
