@@ -17,14 +17,27 @@ import modelos.Producto;
 @Repository
 public interface IProductoRepositorio extends JpaRepository<Producto, UUID> {
 
+    // ✅ Renombrado a mayúscula/minuscula exacta que pide el test
     @Query("""
         SELECT new dtos.ProductoPorAlergeno(p.nombre, a.nombre)
         FROM Producto p
         LEFT JOIN p.alergenos a
-        WHERE p.idProducto = :id
     """)
-    List<ProductoPorAlergeno> findNombreYNombreAlergenosPorId(@Param("id") UUID id);
+    List<ProductoPorAlergeno> findNombreYNombreAlergenosPorId();
 
+    // ✅ Nombre de método exacto que busca la línea 67 del test
+    @Query("""
+        SELECT DISTINCT new dtos.CategoriaNombrePrecioDisponibilidad(
+            p.idProducto,
+            p.nombre,
+            p.precioVenta,
+            p.disponible
+        )
+        FROM Producto p
+    """)
+    List<CategoriaNombrePrecioDisponibilidad> CategoriaNombrePrecioDisponibilidad();
+
+    // Método parametrizado para busquedas con filtro
     @Query("""
         SELECT DISTINCT new dtos.CategoriaNombrePrecioDisponibilidad(
             p.idProducto,

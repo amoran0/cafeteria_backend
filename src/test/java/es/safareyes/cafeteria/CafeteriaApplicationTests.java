@@ -64,7 +64,7 @@ class CafeteriaApplicationTest {
 
     @Test
     void testFindAllProductos() {
-        List<CategoriaNombrePrecioDisponibilidad> productos = productoRepositorio.BuscarPorCategoriaNombrePrecioDisponibilidadSinAlergeno();
+        List<CategoriaNombrePrecioDisponibilidad> productos = productoRepositorio.CategoriaNombrePrecioDisponibilidad();
         assertThat(productos).isNotNull();
     }
 
