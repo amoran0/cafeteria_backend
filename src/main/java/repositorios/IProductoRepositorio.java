@@ -1,9 +1,11 @@
 package repositorios;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
 
 import dtos.CategoriaNombrePrecioDisponibilidad;
+import dtos.ProducotsMasVendidos;
 import dtos.ProductoPorAlergeno;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -41,5 +43,33 @@ public interface IProductoRepositorio extends JpaRepository<Producto, UUID> {
           )
     """ )
     List<CategoriaNombrePrecioDisponibilidad> BuscarPorCategoriaNombrePrecioDisponibilidadSinAlergeno();
+
+    @Query(, nativeQuery = true, value = """
+        SELECT
+            pr.id_producto AS productoId,
+            pr.nombre AS nombre,
+            COALESCE(SUM(pp.cantidad), 0) AS unidadesVendidas,
+            COALESCE(
+                SUM(pp.cantidad * pp.precio_unitario), 0
+            ) AS totalVendido
+        FROM pedido_producto pp
+        INNER JOIN pedido p
+            ON p.id_pedido = pp.id_pedido
+        INNER JOIN producto pr
+            ON pr.id_producto = pp.id_producto
+        WHERE (:desde IS NULL OR p.fecha >= :desde)
+          AND (
+              :hasta IS NULL
+              OR p.fecha < DATE_ADD(:hasta, INTERVAL 1 DAY)
+          )
+        GROUP BY pr.id_producto, pr.nombre
+        ORDER BY unidadesVendidas DESC, pr.nombre ASC
+        LIMIT :limite
+        """)
+    List<ProducotsMasVendidos> obtenerProductosTop(
+            @Param("desde") LocalDate desde,
+            @Param("hasta") LocalDate hasta,
+            @Param("limite") int limite
+    );
 
 }

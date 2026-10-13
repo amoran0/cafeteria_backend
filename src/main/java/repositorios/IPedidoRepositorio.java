@@ -4,6 +4,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 
+import dtos.VentasPorDia;
 import modelos.EstadoPedido;
 import org.springframework.data.jpa.repository.JpaRepository;
 
@@ -23,5 +24,38 @@ public interface IPedidoRepositorio extends JpaRepository<Pedido, UUID> {
             LocalDateTime fechaInicio,
             LocalDateTime fechaFin
     );
+
+
+
+
+    @Query(, nativeQuery = true, value = """
+        SELECT
+            COUNT(DISTINCT p.id_pedido) AS numeroPedidos,
+            COALESCE(
+                SUM(pp.cantidad * pp.precio_unitario), 0
+            ) AS total,
+            COALESCE(
+                SUM(
+                    (pp.cantidad * pp.precio_unitario)
+                    / (1 + COALESCE(pr.iva, 0) / 100.0)
+                ), 0
+            ) AS base,
+            COALESCE(
+                SUM(
+                    pp.cantidad * pp.precio_unitario
+                    -
+                    (pp.cantidad * pp.precio_unitario)
+                    / (1 + COALESCE(pr.iva, 0) / 100.0)
+                ), 0
+            ) AS iva
+        FROM pedido p
+        LEFT JOIN pedido_producto pp
+            ON pp.id_pedido = p.id_pedido
+        LEFT JOIN producto pr
+            ON pr.id_producto = pp.id_producto
+        WHERE p.fecha >= :fecha
+          AND p.fecha < DATE_ADD(:fecha, INTERVAL 1 DAY)
+        """)
+    List<VentasPorDia> obtenerEstadisticasPedidosPorDia(LocalDateTime fecha);
 
 }

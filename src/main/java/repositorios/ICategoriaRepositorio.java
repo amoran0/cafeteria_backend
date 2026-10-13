@@ -13,8 +13,9 @@ import org.springframework.stereotype.Repository;
 @Repository
 public interface ICategoriaRepositorio extends JpaRepository<Categoria, UUID> {
 
-    @Query(nativeQuery = true, value = """  SELECT c, COUNT(p) FROM Categoria c LEFT JOIN c.productos p 
-                                    ON p.activo = true GROUP BY c """)
+    @Query(nativeQuery = true, value = """
+                                    SELECT c, COUNT(p) FROM Categoria c LEFT JOIN c.productos p\s
+                                    ON p.activo = true GROUP BY c\s""")
     List<CategoriasActivos> buscarCategoriasProductosActivos();
 
 }
