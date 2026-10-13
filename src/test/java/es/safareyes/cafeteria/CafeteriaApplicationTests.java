@@ -10,6 +10,7 @@ import dtos.CategoriaNombrePrecioDisponibilidad;
 import dtos.CategoriasActivos;
 import dtos.ProductoPorAlergeno;
 
+import modelos.Cupon;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 
@@ -79,5 +80,10 @@ class CafeteriaApplicationTest {
     void testProductosActivos() {
         List<CategoriasActivos> categorias = categoriaRepositorio.buscarCategoriasProductosActivos();
         assertThat(categorias).isNotNull();
+    }
+    @Test
+    void testFindAllCupones() {
+        List<Cupon> cupones = cuponRepositorio.findAll();
+        assertThat(cupones).isNotNull();
     }
 }
