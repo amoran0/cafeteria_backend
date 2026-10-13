@@ -28,9 +28,7 @@ public interface IPedidoRepositorio extends JpaRepository<Pedido, UUID> {
     @Query(nativeQuery = true, value = """
         SELECT
             COUNT(DISTINCT p.id_pedido) AS numeroPedidos,
-            COALESCE(
-                SUM(pp.cantidad * pp.precio_unitario), 0
-            ) AS total,
+            COALESCE(SUM(pp.cantidad * pp.precio_unitario), 0) AS total,
             COALESCE(
                 SUM(
                     (pp.cantidad * pp.precio_unitario)
@@ -46,12 +44,10 @@ public interface IPedidoRepositorio extends JpaRepository<Pedido, UUID> {
                 ), 0
             ) AS iva
         FROM pedido p
-        LEFT JOIN pedido_producto pp
-            ON pp.id_pedido = p.id_pedido
-        LEFT JOIN producto pr
-            ON pr.id_producto = pp.id_producto
+        LEFT JOIN pedido_producto pp ON pp.id_pedido = p.id_pedido
+        LEFT JOIN producto pr ON pr.id_producto = pp.id_producto
         WHERE p.fecha >= :fecha
           AND p.fecha < (:fecha + CAST('1 day' AS INTERVAL))
-        """)
+    """)
     List<VentasPorDia> obtenerEstadisticasPedidosPorDia(@Param("fecha") LocalDateTime fecha);
 }

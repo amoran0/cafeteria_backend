@@ -17,31 +17,30 @@ import modelos.Producto;
 @Repository
 public interface IProductoRepositorio extends JpaRepository<Producto, UUID> {
 
-    @Query(nativeQuery = true, value = """
-        SELECT p.nombre AS productoNombre, a.nombre AS alergenoNombre
-        FROM producto p
-        LEFT JOIN producto_alergeno pa ON p.id_producto = pa.id_producto
-        LEFT JOIN alergeno a ON pa.id_alergeno = a.id_alergeno
-        WHERE p.id_producto = :id
+    @Query("""
+        SELECT new dtos.ProductoPorAlergeno(p.nombre, a.nombre)
+        FROM Producto p
+        LEFT JOIN p.alergenos a
+        WHERE p.idProducto = :id
     """)
     List<ProductoPorAlergeno> findNombreYNombreAlergenosPorId(@Param("id") UUID id);
 
-    @Query(nativeQuery = true, value = """
-        SELECT DISTINCT 
-            p.id_producto AS idProducto,
-            p.nombre AS nombre,
-            p.precio_venta AS precioVenta,
-            p.disponible AS disponible
-        FROM producto p
-        WHERE p.id_categoria = :categoriaId
+    @Query("""
+        SELECT DISTINCT new dtos.CategoriaNombrePrecioDisponibilidad(
+            p.idProducto,
+            p.nombre,
+            p.precioVenta,
+            p.disponible
+        )
+        FROM Producto p
+        WHERE p.categoria.idCategoria = :categoriaId
           AND LOWER(p.nombre) LIKE LOWER(CONCAT('%', :nombre, '%'))
-          AND p.precio_venta <= :precioMaximo
+          AND p.precioVenta <= :precioMaximo
           AND p.disponible = :disponible
           AND NOT EXISTS (
-              SELECT 1
-              FROM producto_alergeno pa
-              WHERE pa.id_producto = p.id_producto
-                AND pa.id_alergeno = :alergenoId
+              SELECT 1 
+              FROM p.alergenos a 
+              WHERE a.idAlergeno = :alergenoId
           )
     """)
     List<CategoriaNombrePrecioDisponibilidad> buscarPorCategoriaNombrePrecioDisponibilidadSinAlergeno(
@@ -57,14 +56,10 @@ public interface IProductoRepositorio extends JpaRepository<Producto, UUID> {
             pr.id_producto AS productoId,
             pr.nombre AS nombre,
             COALESCE(SUM(pp.cantidad), 0) AS unidadesVendidas,
-            COALESCE(
-                SUM(pp.cantidad * pp.precio_unitario), 0
-            ) AS totalVendido
+            COALESCE(SUM(pp.cantidad * pp.precio_unitario), 0) AS totalVendido
         FROM pedido_producto pp
-        INNER JOIN pedido p
-            ON p.id_pedido = pp.id_pedido
-        INNER JOIN producto pr
-            ON pr.id_producto = pp.id_producto
+        INNER JOIN pedido p ON p.id_pedido = pp.id_pedido
+        INNER JOIN producto pr ON pr.id_producto = pp.id_producto
         WHERE (:desde IS NULL OR p.fecha >= :desde)
           AND (
               :hasta IS NULL
@@ -73,7 +68,7 @@ public interface IProductoRepositorio extends JpaRepository<Producto, UUID> {
         GROUP BY pr.id_producto, pr.nombre
         ORDER BY unidadesVendidas DESC, pr.nombre ASC
         LIMIT :limite
-        """)
+    """)
     List<ProducotsMasVendidos> obtenerProductosTop(
             @Param("desde") LocalDate desde,
             @Param("hasta") LocalDate hasta,
