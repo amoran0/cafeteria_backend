@@ -2,17 +2,18 @@ package dtos;
 
 import java.math.BigDecimal;
 import java.util.UUID;
-
 import lombok.AllArgsConstructor;
-import lombok.Data;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 
-@Data
+@Getter
+@Setter
+@NoArgsConstructor
 @AllArgsConstructor
-
 public class CategoriaNombrePrecioDisponibilidad {
-    private String categoriaNombre;
-    private String productoNombre;
-    private BigDecimal precio;
+    private UUID idProducto;
+    private String nombre;
+    private BigDecimal precioVenta;
     private Boolean disponible;
-    private UUID alergenoId;
 }

@@ -17,34 +17,42 @@ import modelos.Producto;
 @Repository
 public interface IProductoRepositorio extends JpaRepository<Producto, UUID> {
 
-
     @Query(nativeQuery = true, value = """
-        SELECT p.nombre, a.nombre
+        SELECT p.nombre AS productoNombre, a.nombre AS alergenoNombre
         FROM producto p
-        LEFT JOIN producto_alergeno pa ON p.id = pa.producto_id
-        LEFT JOIN alergeno a ON pa.alergeno_id = a.id
-        WHERE p.id = :id
+        LEFT JOIN producto_alergeno pa ON p.id_producto = pa.id_producto
+        LEFT JOIN alergeno a ON pa.id_alergeno = a.id_alergeno
+        WHERE p.id_producto = :id
     """)
-    List<ProductoPorAlergeno> findNombreYNombreAlergenosPorId();
+    List<ProductoPorAlergeno> findNombreYNombreAlergenosPorId(@Param("id") UUID id);
 
     @Query(nativeQuery = true, value = """
-        SELECT DISTINCT p.*
+        SELECT DISTINCT 
+            p.id_producto AS idProducto,
+            p.nombre AS nombre,
+            p.precio_venta AS precioVenta,
+            p.disponible AS disponible
         FROM producto p
-        JOIN producto_categoria pc ON p.id = pc.producto_id
-        WHERE pc.categoria_id = :categoriaId
+        WHERE p.id_categoria = :categoriaId
           AND LOWER(p.nombre) LIKE LOWER(CONCAT('%', :nombre, '%'))
           AND p.precio_venta <= :precioMaximo
           AND p.disponible = :disponible
           AND NOT EXISTS (
               SELECT 1
               FROM producto_alergeno pa
-              WHERE pa.producto_id = p.id
-                AND pa.alergeno_id = :alergenoId
+              WHERE pa.id_producto = p.id_producto
+                AND pa.id_alergeno = :alergenoId
           )
-    """ )
-    List<CategoriaNombrePrecioDisponibilidad> BuscarPorCategoriaNombrePrecioDisponibilidadSinAlergeno();
+    """)
+    List<CategoriaNombrePrecioDisponibilidad> buscarPorCategoriaNombrePrecioDisponibilidadSinAlergeno(
+            @Param("categoriaId") UUID categoriaId,
+            @Param("nombre") String nombre,
+            @Param("precioMaximo") Double precioMaximo,
+            @Param("disponible") Boolean disponible,
+            @Param("alergenoId") UUID alergenoId
+    );
 
-    @Query( nativeQuery = true, value = """
+    @Query(nativeQuery = true, value = """
         SELECT
             pr.id_producto AS productoId,
             pr.nombre AS nombre,
@@ -60,7 +68,7 @@ public interface IProductoRepositorio extends JpaRepository<Producto, UUID> {
         WHERE (:desde IS NULL OR p.fecha >= :desde)
           AND (
               :hasta IS NULL
-              OR p.fecha < DATE_ADD(:hasta, INTERVAL 1 DAY)
+              OR p.fecha < (:hasta + CAST('1 day' AS INTERVAL))
           )
         GROUP BY pr.id_producto, pr.nombre
         ORDER BY unidadesVendidas DESC, pr.nombre ASC
@@ -71,5 +79,4 @@ public interface IProductoRepositorio extends JpaRepository<Producto, UUID> {
             @Param("hasta") LocalDate hasta,
             @Param("limite") int limite
     );
-
 }

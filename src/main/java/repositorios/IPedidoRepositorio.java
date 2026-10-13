@@ -6,10 +6,10 @@ import java.util.UUID;
 
 import dtos.VentasPorDia;
 import modelos.EstadoPedido;
-import org.springframework.data.jpa.repository.JpaRepository;
-
 import modelos.Pedido;
+import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 @Repository
@@ -18,17 +18,14 @@ public interface IPedidoRepositorio extends JpaRepository<Pedido, UUID> {
     @Query("SELECT p FROM Pedido p")
     List<Pedido> obtenerTodosPedidos();
 
-    List<Pedido> findByCliente_IdAndEstadoAndFechaBetween(
+    List<Pedido> findByCliente_IdClienteAndEstadoAndFechaBetween(
             UUID clienteId,
             EstadoPedido estado,
             LocalDateTime fechaInicio,
             LocalDateTime fechaFin
     );
 
-
-
-
-    @Query( nativeQuery = true, value = """
+    @Query(nativeQuery = true, value = """
         SELECT
             COUNT(DISTINCT p.id_pedido) AS numeroPedidos,
             COALESCE(
@@ -54,8 +51,7 @@ public interface IPedidoRepositorio extends JpaRepository<Pedido, UUID> {
         LEFT JOIN producto pr
             ON pr.id_producto = pp.id_producto
         WHERE p.fecha >= :fecha
-          AND p.fecha < DATE_ADD(:fecha, INTERVAL 1 DAY)
+          AND p.fecha < (:fecha + CAST('1 day' AS INTERVAL))
         """)
-    List<VentasPorDia> obtenerEstadisticasPedidosPorDia(LocalDateTime fecha);
-
+    List<VentasPorDia> obtenerEstadisticasPedidosPorDia(@Param("fecha") LocalDateTime fecha);
 }

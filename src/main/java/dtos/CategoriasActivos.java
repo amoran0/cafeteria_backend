@@ -1,13 +1,17 @@
 package dtos;
 
+import java.util.UUID;
 import lombok.AllArgsConstructor;
-import lombok.Data;
-import modelos.Categoria;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 
-@Data
+@Getter
+@Setter
+@NoArgsConstructor
 @AllArgsConstructor
 public class CategoriasActivos {
-
-    private Boolean categoria;
-    private String cantidadProductosActivos;
+    private UUID idCategoria;
+    private String nombre;
+    private Long cantidadProductosActivos;
 }
