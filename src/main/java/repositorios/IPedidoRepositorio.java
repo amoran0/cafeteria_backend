@@ -28,7 +28,7 @@ public interface IPedidoRepositorio extends JpaRepository<Pedido, UUID> {
 
 
 
-    @Query(, nativeQuery = true, value = """
+    @Query( nativeQuery = true, value = """
         SELECT
             COUNT(DISTINCT p.id_pedido) AS numeroPedidos,
             COALESCE(

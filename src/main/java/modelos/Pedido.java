@@ -5,6 +5,8 @@ import java.util.UUID;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -31,8 +33,9 @@ public class Pedido {
     @Column(name = "id", nullable = false, updatable = false, columnDefinition = "uuid")
     private UUID id;
 
+    @Enumerated(EnumType.STRING)
     @Column(name = "estado", length = 50)
-    private Enum<EstadoPedido>  estado;
+    private EstadoPedido estado;
 
     @Column(name = "fecha")
     private LocalDate fecha;

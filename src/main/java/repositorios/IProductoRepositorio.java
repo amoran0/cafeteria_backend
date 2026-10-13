@@ -44,7 +44,7 @@ public interface IProductoRepositorio extends JpaRepository<Producto, UUID> {
     """ )
     List<CategoriaNombrePrecioDisponibilidad> BuscarPorCategoriaNombrePrecioDisponibilidadSinAlergeno();
 
-    @Query(, nativeQuery = true, value = """
+    @Query( nativeQuery = true, value = """
         SELECT
             pr.id_producto AS productoId,
             pr.nombre AS nombre,
