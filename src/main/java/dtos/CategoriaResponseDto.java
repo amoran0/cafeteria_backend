@@ -12,7 +12,7 @@ public record CategoriaResponseDto(
 
     public static CategoriaResponseDto of(Categoria categoria){
         return new CategoriaResponseDto(
-                categoria.getId(),
+                categoria.getidCategoria(),
                 categoria.getNombre(),
                 categoria.isDisponible()
         );
