@@ -1,18 +1,11 @@
 package dtos;
 
 import java.math.BigDecimal;
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
 
-@Getter
-@Setter
-@NoArgsConstructor
-@AllArgsConstructor
-public class VentasPorDia {
-    private Long numeroPedidos;
-    private BigDecimal total;
-    private BigDecimal base;
-    private BigDecimal iva;
+public record VentasPorDia(
+        Long numeroPedidos,
+        BigDecimal total,
+        BigDecimal base,
+        BigDecimal iva
+) {
 }
