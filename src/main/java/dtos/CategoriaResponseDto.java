@@ -12,9 +12,9 @@ public record CategoriaResponseDto(
 
     public static CategoriaResponseDto of(Categoria categoria){
         return new CategoriaResponseDto(
-                categoria.getidCategoria(),
+                categoria.getIdCategoria(),
                 categoria.getNombre(),
-                categoria.isDisponible()
+                categoria.getDisponible()
         );
     }
 }
