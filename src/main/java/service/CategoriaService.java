@@ -1,7 +1,6 @@
 package service;
 
 import jakarta.persistence.EntityNotFoundException;
-import lombok.AllArgsConstructor;
 import lombok.RequiredArgsConstructor;
 import modelos.Categoria;
 import org.springframework.stereotype.Service;
@@ -11,10 +10,9 @@ import java.util.List;
 
 @Service
 @RequiredArgsConstructor
-@AllArgsConstructor
 public class CategoriaService {
 
-    private ICategoriaRepositorio categoriaRepository;
+    private final ICategoriaRepositorio categoriaRepository;
 
     public List<Categoria> listarCategorias(){
         List<Categoria> lista = categoriaRepository.findAll();
