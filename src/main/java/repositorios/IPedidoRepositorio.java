@@ -8,12 +8,38 @@ import dtos.VentasPorDia;
 import modelos.EstadoPedido;
 import modelos.Pedido;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 @Repository
 public interface IPedidoRepositorio extends JpaRepository<Pedido, UUID> {
+
+    @Query("""
+        SELECT p FROM Pedido p
+        WHERE (:estado IS NULL OR p.estado = :estado)
+          AND (:desde IS NULL OR p.fecha >= :desde)
+          AND (:hasta IS NULL OR p.fecha <= :hasta)
+    """)
+    Page<Pedido> buscarPedidos(@Param("estado") EstadoPedido estado,
+                               @Param("desde") LocalDateTime desde,
+                               @Param("hasta") LocalDateTime hasta,
+                               Pageable pageable);
+
+    @Query("""
+        SELECT p FROM Pedido p
+        WHERE p.cliente.idCliente = :clienteId
+          AND (:estado IS NULL OR p.estado = :estado)
+          AND (:desde IS NULL OR p.fecha >= :desde)
+          AND (:hasta IS NULL OR p.fecha <= :hasta)
+    """)
+    Page<Pedido> buscarPedidosCliente(@Param("clienteId") UUID clienteId,
+                                      @Param("estado") EstadoPedido estado,
+                                      @Param("desde") LocalDateTime desde,
+                                      @Param("hasta") LocalDateTime hasta,
+                                      Pageable pageable);
 
     @Query("SELECT p FROM Pedido p")
     List<Pedido> obtenerTodosPedidos();

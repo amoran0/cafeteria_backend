@@ -8,6 +8,7 @@ import dtos.CategoriaNombrePrecioDisponibilidad;
 import dtos.ProducotsMasVendidos;
 import dtos.ProductoPorAlergeno;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -16,6 +17,14 @@ import modelos.Producto;
 
 @Repository
 public interface IProductoRepositorio extends JpaRepository<Producto, UUID> {
+
+    @Override
+    @EntityGraph(attributePaths = {"categoria", "alergenos"})
+    List<Producto> findAll();
+
+    @Override
+    @EntityGraph(attributePaths = {"categoria", "alergenos"})
+    java.util.Optional<Producto> findById(UUID id);
 
     // ✅ Renombrado a mayúscula/minuscula exacta que pide el test
     @Query("""
