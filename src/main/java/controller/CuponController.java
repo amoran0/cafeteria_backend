@@ -8,6 +8,7 @@ import lombok.RequiredArgsConstructor;
 import modelos.Cupon;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 import service.CuponService;
 
@@ -23,7 +24,8 @@ public class CuponController {
     }
 
     @PostMapping("/validar")
-    public CuponValidacionResponseDto validar(@Valid @RequestBody CuponValidacionRequestDto dto) {
-        return cuponService.validar(dto.codigo(), dto.subtotal());
+    public CuponValidacionResponseDto validar(@Valid @RequestBody CuponValidacionRequestDto dto,
+                                              Authentication auth) {
+        return cuponService.validar(dto.codigo(), dto.subtotal(), auth.getName());
     }
 }

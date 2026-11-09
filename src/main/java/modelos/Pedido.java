@@ -3,9 +3,9 @@ package modelos;
 import jakarta.persistence.*;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
-import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -17,7 +17,6 @@ import org.hibernate.dialect.type.PostgreSQLEnumJdbcType;
 @Getter
 @Setter
 @NoArgsConstructor
-@AllArgsConstructor
 public class Pedido {
 
     @Id
@@ -29,31 +28,39 @@ public class Pedido {
     @JoinColumn(name = "id_cliente", nullable = false)
     private Cliente cliente;
 
+    /** Cupón aplicado (null si no hay o si ganó el descuento de socio, RN-07) */
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "id_descuento")
-    private Descuento descuento;
-
-    @Column(name = "precio_unitario")
-    private BigDecimal precioUnitario;
+    @JoinColumn(name = "id_cupon")
+    private Cupon cupon;
 
     @Enumerated(EnumType.STRING)
     @JdbcType(PostgreSQLEnumJdbcType.class)
     @Column(name = "estado", nullable = false)
     private EstadoPedido estado = EstadoPedido.PENDIENTE;
 
-    @Column(name = "fecha")
+    @Column(name = "fecha", nullable = false)
     private LocalDateTime fecha;
 
-    @Enumerated(EnumType.STRING)
-    @JdbcType(PostgreSQLEnumJdbcType.class)
-    @Column(name = "turno")
-    private TurnoPedido turno;
+    /** RN-09: número de pedidos creados ese día más uno */
+    @Column(name = "numero_turno", nullable = false)
+    private Integer numeroTurno;
 
-    @ManyToMany(fetch = FetchType.LAZY)
-    @JoinTable(
-            name = "pedido_cupon",
-            joinColumns = @JoinColumn(name = "id_pedido"),
-            inverseJoinColumns = @JoinColumn(name = "id_cupon")
-    )
-    private List<Cupon> cupones;
+    // RN-05: importes guardados (IVA 10 % incluido)
+    @Column(name = "subtotal", nullable = false)
+    private BigDecimal subtotal;
+
+    @Column(name = "descuento", nullable = false)
+    private BigDecimal descuento;
+
+    @Column(name = "total", nullable = false)
+    private BigDecimal total;
+
+    @Column(name = "base_imponible", nullable = false)
+    private BigDecimal baseImponible;
+
+    @Column(name = "cuota_iva", nullable = false)
+    private BigDecimal cuotaIva;
+
+    @OneToMany(mappedBy = "pedido", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<LineaPedido> lineas = new ArrayList<>();
 }

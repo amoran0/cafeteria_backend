@@ -17,11 +17,12 @@ public interface ICategoriaRepositorio extends JpaRepository<Categoria, UUID> {
         SELECT new dtos.CategoriasActivos(
             c.idCategoria,
             c.nombre,
+            c.disponible,
             COUNT(p)
         )
         FROM Categoria c
         LEFT JOIN Producto p ON p.categoria = c AND p.activa = true
-        GROUP BY c.idCategoria, c.nombre
+        GROUP BY c.idCategoria, c.nombre, c.disponible
     """)
     List<CategoriasActivos> buscarCategoriasProductosActivos();
 }

@@ -6,7 +6,8 @@ import org.springframework.boot.persistence.autoconfigure.EntityScan;
 import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
 
 @SpringBootApplication(scanBasePackages = {
-        "es.safareyes.cafeteria", "controller", "service", "repositorios", "modelos", "dtos"
+        "es.safareyes.cafeteria", "controller", "service", "repositorios", "modelos", "dtos",
+        "exceptions", "config", "integracion"
 })
 @EntityScan(basePackages = {"modelos", "es.safareyes.cafeteria"})
 @EnableJpaRepositories(basePackages = {"repositorios", "es.safareyes.cafeteria"})

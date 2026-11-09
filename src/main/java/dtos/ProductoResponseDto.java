@@ -16,8 +16,11 @@ public record ProductoResponseDto(
         Boolean disponible,
         Boolean activa,
         BigDecimal iva,
-        List<UUID> alergenosIds
+        List<AlergenoDto> alergenos
 ) {
+    public record AlergenoDto(UUID id, String nombre) {
+    }
+
     public static ProductoResponseDto of(Producto producto) {
         return new ProductoResponseDto(
                 producto.getIdProducto(),
@@ -30,7 +33,7 @@ public record ProductoResponseDto(
                 producto.getActiva(),
                 producto.getIva(),
                 producto.getAlergenos() == null ? List.of()
-                        : producto.getAlergenos().stream().map(a -> a.getIdAlergeno()).toList()
+                        : producto.getAlergenos().stream().map(a -> new AlergenoDto(a.getIdAlergeno(), a.getNombre())).toList()
         );
     }
 }

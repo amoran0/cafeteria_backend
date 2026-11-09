@@ -1,6 +1,6 @@
 package repositorios;
 
-import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 
@@ -13,7 +13,9 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import modelos.EstadoPedido;
 import modelos.Producto;
+import org.springframework.data.domain.Pageable;
 
 @Repository
 public interface IProductoRepositorio extends JpaRepository<Producto, UUID> {
@@ -73,27 +75,21 @@ public interface IProductoRepositorio extends JpaRepository<Producto, UUID> {
             @Param("alergenoId") UUID alergenoId
     );
 
-    @Query(nativeQuery = true, value = """
-        SELECT
-            pr.id_producto AS productoId,
-            pr.nombre AS nombre,
-            COALESCE(SUM(pp.cantidad), 0) AS unidadesVendidas,
-            COALESCE(SUM(pp.cantidad * pp.precio_unitario), 0) AS totalVendido
-        FROM pedido_producto pp
-        INNER JOIN pedido p ON p.id_pedido = pp.id_pedido
-        INNER JOIN producto pr ON pr.id_producto = pp.id_producto
-        WHERE (:desde IS NULL OR p.fecha >= :desde)
-          AND (
-              :hasta IS NULL
-              OR p.fecha < (:hasta + CAST('1 day' AS INTERVAL))
-          )
-        GROUP BY pr.id_producto, pr.nombre
-        ORDER BY unidadesVendidas DESC, pr.nombre ASC
-        LIMIT :limite
+    List<Producto> findByCategoria_IdCategoria(UUID categoriaId);
+
+    /** RN-10: ranking de productos de pedidos en el estado indicado (ENTREGADO) */
+    @Query("""
+        SELECT new dtos.ProducotsMasVendidos(
+            l.producto.idProducto, l.producto.nombre, SUM(l.cantidad), SUM(l.precioUnitario * l.cantidad))
+        FROM LineaPedido l
+        WHERE l.pedido.estado = :estado AND l.pedido.fecha >= :inicio AND l.pedido.fecha < :fin
+        GROUP BY l.producto.idProducto, l.producto.nombre
+        ORDER BY SUM(l.cantidad) DESC, l.producto.nombre
     """)
     List<ProducotsMasVendidos> obtenerProductosTop(
-            @Param("desde") LocalDate desde,
-            @Param("hasta") LocalDate hasta,
-            @Param("limite") int limite
+            @Param("estado") EstadoPedido estado,
+            @Param("inicio") LocalDateTime inicio,
+            @Param("fin") LocalDateTime fin,
+            Pageable limite
     );
 }

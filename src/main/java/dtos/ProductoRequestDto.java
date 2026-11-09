@@ -16,7 +16,7 @@ public record ProductoRequestDto(
         @NotNull(message = "El precio de venta es obligatorio")
         @Positive(message = "El precio debe ser positivo") BigDecimal precioVenta,
         Boolean disponible,
-        @NotNull(message = "Activo o inactivo es obligatorio") Boolean activa,
+        Boolean activa,
         BigDecimal iva,
         List<UUID> alergenosIds
 ) {

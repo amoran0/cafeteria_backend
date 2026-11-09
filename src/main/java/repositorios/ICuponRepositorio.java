@@ -11,4 +11,6 @@ import org.springframework.stereotype.Repository;
 @Repository
 public interface ICuponRepositorio extends JpaRepository<Cupon, UUID> {
     Optional<Cupon> findByCodigoIgnoreCase(String codigo);
+
+    boolean existsByCodigoIgnoreCase(String codigo);
 }

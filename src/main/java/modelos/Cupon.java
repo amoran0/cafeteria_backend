@@ -46,4 +46,11 @@ public class Cupon {
 
     @Column(name = "fecha_fin")
     private LocalDate fechaFin;
+
+    @Column(name = "activo", nullable = false)
+    private Boolean activo = true;
+
+    /** Si tiene email, el cupón es personal de ese cliente (RN-06) */
+    @Column(name = "email")
+    private String email;
 }

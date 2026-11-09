@@ -22,14 +22,15 @@ public class ProductoController {
 
     private final ProductoService productoService;
 
-    @GetMapping("/carta")
+    @GetMapping
     public Page<ProductoResponseDto> carta(
             @RequestParam(required = false) UUID categoriaId,
             @RequestParam(required = false) String nombre,
             @RequestParam(required = false) BigDecimal precioMaximo,
             @RequestParam(required = false) Boolean disponible,
+            @RequestParam(required = false) UUID sinAlergenoId,
             Pageable pageable) {
-        return productoService.listarCarta(categoriaId, nombre, precioMaximo, disponible, pageable)
+        return productoService.listarCarta(categoriaId, nombre, precioMaximo, disponible, sinAlergenoId, pageable)
                 .map(ProductoResponseDto::of);
     }
 
