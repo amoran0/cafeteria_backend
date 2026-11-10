@@ -10,7 +10,6 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 import service.PedidoService;
 
@@ -24,13 +23,13 @@ public class PedidoController {
     private final PedidoService pedidoService;
 
     @PostMapping
-    public ResponseEntity<PedidoResponseDto> crear(@Valid @RequestBody PedidoRequestDto dto, Authentication auth) {
-        return ResponseEntity.status(HttpStatus.CREATED).body(pedidoService.crear(dto, emailSiCliente(auth)));
+    public ResponseEntity<PedidoResponseDto> crear(@Valid @RequestBody PedidoRequestDto dto) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(pedidoService.crear(dto));
     }
 
     @GetMapping("/{id}")
-    public PedidoResponseDto obtener(@PathVariable UUID id, Authentication auth) {
-        return pedidoService.obtener(id, emailSiCliente(auth));
+    public PedidoResponseDto obtener(@PathVariable UUID id) {
+        return pedidoService.obtener(id);
     }
 
     @GetMapping
@@ -38,24 +37,16 @@ public class PedidoController {
                                           @RequestParam(required = false) EstadoPedido estado,
                                           @RequestParam(required = false) LocalDate desde,
                                           @RequestParam(required = false) LocalDate hasta,
-                                          Pageable pageable,
-                                          Authentication auth) {
+                                          Pageable pageable) {
         return pedidoService.listar(clienteId, estado,
                 desde == null ? null : desde.atStartOfDay(),
                 hasta == null ? null : hasta.plusDays(1).atStartOfDay(),
-                pageable, emailSiCliente(auth));
+                pageable);
     }
 
     @PatchMapping("/{id}/estado")
     public PedidoResponseDto cambiarEstado(@PathVariable UUID id,
                                            @Valid @RequestBody EstadoPedidoRequestDto dto) {
         return pedidoService.cambiarEstado(id, dto.estado());
-    }
-
-    /** Devuelve el email del usuario si es CLIENTE (para limitarlo a sus pedidos), o null si es personal */
-    private String emailSiCliente(Authentication auth) {
-        boolean esCliente = auth.getAuthorities().stream()
-                .anyMatch(a -> a.getAuthority().equals("ROLE_CLIENTE"));
-        return esCliente ? auth.getName() : null;
     }
 }

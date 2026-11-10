@@ -1,13 +1,9 @@
--- =============================================================
--- Script cafetería (adaptado a los requisitos RF-01..RF-08 / RN-01..RN-10)
--- Se puede volver a ejecutar: borra y recrea todo.
--- =============================================================
+
 
 DROP TABLE IF EXISTS pedido_producto, pedido_cupon, pedido, descuento, cupon,
     producto_alergeno, alergeno, producto, categoria, cliente, usuario CASCADE;
 DROP TYPE IF EXISTS estado_pedido, turno_pedido, rol_usuario, tipo_cupon CASCADE;
 
--- RN-08: PENDIENTE → EN_PREPARACION → LISTO → ENTREGADO, y PENDIENTE → CANCELADO
 CREATE TYPE estado_pedido AS ENUM ('PENDIENTE', 'EN_PREPARACION', 'LISTO', 'ENTREGADO', 'CANCELADO');
 CREATE TYPE rol_usuario AS ENUM ('ADMIN', 'BARISTA', 'CAMARERO', 'CLIENTE');
 CREATE TYPE tipo_cupon AS ENUM ('FIJO', 'PORCENTAJE');
@@ -51,7 +47,7 @@ CREATE TABLE usuario (
     id_usuario UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     rol rol_usuario NOT NULL DEFAULT 'CLIENTE',
     mail VARCHAR UNIQUE NOT NULL,
-    contrasena VARCHAR NOT NULL             -- texto plano o con prefijo {bcrypt}
+    contrasena VARCHAR NOT NULL
 );
 
 CREATE TABLE cliente (
@@ -64,9 +60,6 @@ CREATE TABLE cliente (
     FOREIGN KEY (id_usuario) REFERENCES usuario(id_usuario)
 );
 
--- RN-06: válido si existe, está activo, está en vigencia, no ha llegado a max_usos,
--- el subtotal llega a importe_min y, si tiene email (personal), coincide con el del cliente.
--- Los usos se cuentan con los pedidos no cancelados que lo tienen (RN-08).
 CREATE TABLE cupon (
     id_cupon UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     codigo VARCHAR UNIQUE NOT NULL,
@@ -83,21 +76,20 @@ CREATE TABLE cupon (
 CREATE TABLE pedido (
     id_pedido UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     id_cliente UUID NOT NULL,
-    id_cupon UUID,                                      -- cupón aplicado (RN-07: no se acumula con el de socio)
+    id_cupon UUID,
     estado estado_pedido NOT NULL DEFAULT 'PENDIENTE',
     fecha TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    numero_turno INTEGER NOT NULL,                      -- RN-09
-    subtotal DECIMAL(10,2) NOT NULL,                    -- RN-05
+    numero_turno INTEGER NOT NULL,
+    subtotal DECIMAL(10,2) NOT NULL,
     descuento DECIMAL(10,2) NOT NULL DEFAULT 0,
     total DECIMAL(10,2) NOT NULL,
-    base_imponible DECIMAL(10,2) NOT NULL,              -- total / 1,10
-    cuota_iva DECIMAL(10,2) NOT NULL,                   -- total - base
+    base_imponible DECIMAL(10,2) NOT NULL,
+    cuota_iva DECIMAL(10,2) NOT NULL,
 
     FOREIGN KEY (id_cliente) REFERENCES cliente(id_cliente),
     FOREIGN KEY (id_cupon) REFERENCES cupon(id_cupon)
 );
 
--- RN-03 / RN-04: líneas del pedido con el precio vigente al crearlo
 CREATE TABLE pedido_producto (
     id_pedido UUID,
     id_producto UUID,

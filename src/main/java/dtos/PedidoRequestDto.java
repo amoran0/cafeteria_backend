@@ -8,7 +8,7 @@ import java.util.List;
 import java.util.UUID;
 
 public record PedidoRequestDto(
-        UUID clienteId,                 // obligatorio si lo crea un barista; un cliente usa el suyo
+        @NotNull(message = "El cliente es obligatorio") UUID clienteId,
         @NotEmpty(message = "El pedido debe tener líneas") List<@Valid Linea> lineas,
         String codigoCupon,
         String dniSocio

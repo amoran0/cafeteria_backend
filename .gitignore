@@ -31,3 +31,6 @@ build/
 
 ### VS Code ###
 .vscode/
+
+### Configuraciones de ejecución locales (contienen credenciales) ###
+.run/

@@ -35,10 +35,10 @@ public class PedidoService {
     private final CuponService cuponService;
     private final FitZoneClient fitZoneClient;
 
-    /** emailCliente != null cuando quien crea el pedido es un CLIENTE (usa su propio cliente) */
     @Transactional
-    public PedidoResponseDto crear(PedidoRequestDto dto, String emailCliente) {
-        Cliente cliente = resolverCliente(dto.clienteId(), emailCliente);
+    public PedidoResponseDto crear(PedidoRequestDto dto) {
+        Cliente cliente = clienteRepositorio.findById(dto.clienteId())
+                .orElseThrow(() -> new NotFoundException("Cliente no encontrado"));
 
         // RN-04: agrupar líneas del mismo producto y comprobar límites
         Map<UUID, Integer> cantidades = new LinkedHashMap<>();
@@ -107,21 +107,13 @@ public class PedidoService {
     }
 
     @Transactional(readOnly = true)
-    public PedidoResponseDto obtener(UUID id, String emailCliente) {
-        Pedido pedido = buscar(id);
-        // un cliente solo puede ver sus pedidos
-        if (emailCliente != null && !emailCliente.equalsIgnoreCase(pedido.getCliente().getUsuario().getMail())) {
-            throw new NotFoundException("Pedido no encontrado");
-        }
-        return PedidoResponseDto.of(pedido);
+    public PedidoResponseDto obtener(UUID id) {
+        return PedidoResponseDto.of(buscar(id));
     }
 
     @Transactional(readOnly = true)
     public Page<PedidoResponseDto> listar(UUID clienteId, EstadoPedido estado, LocalDateTime desde,
-                                          LocalDateTime hasta, Pageable pageable, String emailCliente) {
-        if (emailCliente != null) {
-            clienteId = clienteDeUsuario(emailCliente).getIdCliente();
-        }
+                                          LocalDateTime hasta, Pageable pageable) {
         // sin filtro = todos los estados y un rango de fechas amplio (Postgres no admite parámetros nulos aquí)
         List<EstadoPedido> estados = estado == null ? List.of(EstadoPedido.values()) : List.of(estado);
         LocalDateTime inicio = desde == null ? LocalDateTime.of(2000, 1, 1, 0, 0) : desde;
@@ -146,21 +138,5 @@ public class PedidoService {
     private Pedido buscar(UUID id) {
         return pedidoRepositorio.findById(id)
                 .orElseThrow(() -> new NotFoundException("Pedido no encontrado"));
-    }
-
-    private Cliente resolverCliente(UUID clienteId, String emailCliente) {
-        if (emailCliente != null) {
-            return clienteDeUsuario(emailCliente);
-        }
-        if (clienteId == null) {
-            throw new ReglaNegocioException("Hay que indicar el cliente del pedido");
-        }
-        return clienteRepositorio.findById(clienteId)
-                .orElseThrow(() -> new NotFoundException("Cliente no encontrado"));
-    }
-
-    private Cliente clienteDeUsuario(String email) {
-        return clienteRepositorio.findByUsuario_Mail(email)
-                .orElseThrow(() -> new NotFoundException("El usuario no tiene un cliente asociado"));
     }
 }
