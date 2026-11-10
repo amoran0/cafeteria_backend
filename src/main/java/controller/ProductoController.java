@@ -5,6 +5,7 @@ import dtos.ProductoRequestDto;
 import dtos.ProductoResponseDto;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import mappers.ProductoMapper;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
@@ -31,29 +32,29 @@ public class ProductoController {
             @RequestParam(required = false) UUID sinAlergenoId,
             Pageable pageable) {
         return productoService.listarCarta(categoriaId, nombre, precioMaximo, disponible, sinAlergenoId, pageable)
-                .map(ProductoResponseDto::of);
+                .map(ProductoMapper::toDto);
     }
 
     @GetMapping("/{id}")
     public ProductoResponseDto obtener(@PathVariable UUID id) {
-        return ProductoResponseDto.of(productoService.obtenerProducto(id));
+        return ProductoMapper.toDto(productoService.obtenerProducto(id));
     }
 
     @PostMapping
     public ResponseEntity<ProductoResponseDto> crear(@Valid @RequestBody ProductoRequestDto dto) {
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(ProductoResponseDto.of(productoService.crearProducto(dto)));
+                .body(ProductoMapper.toDto(productoService.crearProducto(dto)));
     }
 
     @PutMapping("/{id}")
     public ProductoResponseDto modificar(@PathVariable UUID id, @Valid @RequestBody ProductoRequestDto dto) {
-        return ProductoResponseDto.of(productoService.modificarProducto(id, dto));
+        return ProductoMapper.toDto(productoService.modificarProducto(id, dto));
     }
 
     @PatchMapping("/{id}/disponibilidad")
     public ProductoResponseDto disponibilidad(@PathVariable UUID id,
                                               @Valid @RequestBody DisponibilidadRequestDto dto) {
-        return ProductoResponseDto.of(productoService.cambiarDisponibilidad(id, dto.disponible()));
+        return ProductoMapper.toDto(productoService.cambiarDisponibilidad(id, dto.disponible()));
     }
 
     @DeleteMapping("/{id}")

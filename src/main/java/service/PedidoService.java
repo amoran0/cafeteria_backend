@@ -6,6 +6,7 @@ import exceptions.NotFoundException;
 import exceptions.ReglaNegocioException;
 import integracion.FitZoneClient;
 import lombok.RequiredArgsConstructor;
+import mappers.PedidoMapper;
 import modelos.*;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -103,12 +104,12 @@ public class PedidoService {
         LocalDateTime inicioDia = pedido.getFecha().toLocalDate().atStartOfDay();
         pedido.setNumeroTurno((int) pedidoRepositorio.countByFechaGreaterThanEqual(inicioDia) + 1);
 
-        return PedidoResponseDto.of(pedidoRepositorio.save(pedido));
+        return PedidoMapper.toDto(pedidoRepositorio.save(pedido));
     }
 
     @Transactional(readOnly = true)
     public PedidoResponseDto obtener(UUID id) {
-        return PedidoResponseDto.of(buscar(id));
+        return PedidoMapper.toDto(buscar(id));
     }
 
     @Transactional(readOnly = true)
@@ -121,7 +122,7 @@ public class PedidoService {
         Page<Pedido> pedidos = clienteId != null
                 ? pedidoRepositorio.buscarPedidosCliente(clienteId, estados, inicio, fin, pageable)
                 : pedidoRepositorio.buscarPedidos(estados, inicio, fin, pageable);
-        return pedidos.map(PedidoResponseDto::of);
+        return pedidos.map(PedidoMapper::toDto);
     }
 
     /** RN-08 */
@@ -132,7 +133,7 @@ public class PedidoService {
             throw new ReglaNegocioException("No se puede pasar de " + pedido.getEstado() + " a " + nuevo);
         }
         pedido.setEstado(nuevo); // al cancelar, el uso del cupón se libera: solo cuentan pedidos no cancelados
-        return PedidoResponseDto.of(pedido);
+        return PedidoMapper.toDto(pedido);
     }
 
     private Pedido buscar(UUID id) {

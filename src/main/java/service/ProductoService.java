@@ -3,6 +3,7 @@ package service;
 import dtos.ProductoRequestDto;
 import exceptions.NotFoundException;
 import lombok.RequiredArgsConstructor;
+import mappers.ProductoMapper;
 import modelos.Alergeno;
 import modelos.Producto;
 import org.springframework.data.domain.Page;
@@ -78,13 +79,7 @@ public class ProductoService {
     private void actualizar(Producto producto, ProductoRequestDto dto) {
         producto.setCategoria(categoriaRepositorio.findById(dto.categoriaId())
                 .orElseThrow(() -> new NotFoundException("Categoría no encontrada")));
-        producto.setNombre(dto.nombre().trim());
-        producto.setDescripcion(dto.descripcion());
-        producto.setPrecioBase(dto.precioBase());
-        producto.setPrecioVenta(dto.precioVenta());
-        producto.setDisponible(dto.disponible() == null || dto.disponible());
-        producto.setActiva(dto.activa() == null || dto.activa());
-        producto.setIva(dto.iva());
+        ProductoMapper.actualizarEntidad(producto, dto);
         List<UUID> ids = dto.alergenosIds() == null ? List.of() : dto.alergenosIds();
         List<Alergeno> alergenos = alergenoRepositorio.findAllById(ids);
         if (alergenos.size() != new HashSet<>(ids).size()) {

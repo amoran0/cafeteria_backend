@@ -5,6 +5,7 @@ import dtos.CategoriasActivos;
 import dtos.DisponibilidadRequestDto;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import mappers.CategoriaMapper;
 import org.springframework.web.bind.annotation.*;
 import service.CategoriaService;
 
@@ -26,6 +27,6 @@ public class CategoriaController {
     @PatchMapping("/{id}/disponibilidad")
     public CategoriaResponseDto disponibilidad(@PathVariable UUID id,
                                                @Valid @RequestBody DisponibilidadRequestDto dto) {
-        return CategoriaResponseDto.of(categoriaService.cambiarDisponibilidad(id, dto.disponible()));
+        return CategoriaMapper.toDto(categoriaService.cambiarDisponibilidad(id, dto.disponible()));
     }
 }

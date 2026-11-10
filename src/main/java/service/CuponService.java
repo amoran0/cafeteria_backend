@@ -6,6 +6,7 @@ import exceptions.ConflictoException;
 import exceptions.NotFoundException;
 import exceptions.ReglaNegocioException;
 import lombok.RequiredArgsConstructor;
+import mappers.CuponMapper;
 import modelos.Cupon;
 import modelos.EstadoPedido;
 import modelos.TipoCupon;
@@ -34,17 +35,7 @@ public class CuponService {
         if (dto.tipo() == TipoCupon.PORCENTAJE && dto.valor().compareTo(BigDecimal.valueOf(100)) > 0) {
             throw new ReglaNegocioException("Un cupón de porcentaje no puede superar el 100 %");
         }
-        Cupon cupon = new Cupon();
-        cupon.setCodigo(codigo);
-        cupon.setTipo(dto.tipo());
-        cupon.setValor(dto.valor());
-        cupon.setImporteMin(dto.importeMin());
-        cupon.setMaxUsos(dto.maxUsos());
-        cupon.setFechaInicio(dto.fechaInicio());
-        cupon.setFechaFin(dto.fechaFin());
-        cupon.setEmail(dto.email());
-        cupon.setActivo(true);
-        return cuponRepositorio.save(cupon);
+        return cuponRepositorio.save(CuponMapper.toEntity(dto));
     }
 
     public CuponValidacionResponseDto validar(String codigo, BigDecimal subtotal, String emailCliente) {
