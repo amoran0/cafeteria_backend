@@ -6,23 +6,23 @@ import java.util.List;
 
 import javax.sql.DataSource;
 
-import dtos.CategoriaNombrePrecioDisponibilidad;
-import dtos.CategoriasActivos;
-import dtos.ProductoPorAlergeno;
+import es.safareyes.cafeteria.dtos.CategoriaNombrePrecioDisponibilidad;
+import es.safareyes.cafeteria.dtos.CategoriasActivos;
+import es.safareyes.cafeteria.dtos.ProductoPorAlergeno;
 
-import modelos.Cupon;
+import es.safareyes.cafeteria.modelos.Cupon;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
 import org.springframework.boot.jdbc.test.autoconfigure.AutoConfigureTestDatabase;
-import repositorios.IAlergenoRepositorio;
-import repositorios.ICategoriaRepositorio;
-import repositorios.IClienteRepositorio;
-import repositorios.ICuponRepositorio;
-import repositorios.IPedidoRepositorio;
-import repositorios.IProductoRepositorio;
-import repositorios.IUsuarioRepositorio;
+import es.safareyes.cafeteria.repositorios.IAlergenoRepositorio;
+import es.safareyes.cafeteria.repositorios.ICategoriaRepositorio;
+import es.safareyes.cafeteria.repositorios.IClienteRepositorio;
+import es.safareyes.cafeteria.repositorios.ICuponRepositorio;
+import es.safareyes.cafeteria.repositorios.IPedidoRepositorio;
+import es.safareyes.cafeteria.repositorios.IProductoRepositorio;
+import es.safareyes.cafeteria.repositorios.IUsuarioRepositorio;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
