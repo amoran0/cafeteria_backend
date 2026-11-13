@@ -25,10 +25,9 @@ public record ProductoRequestDto(
         @Digits(integer = 6, fraction = 2, message = "El precio de venta admite como máximo 6 cifras enteras y 2 decimales")
         BigDecimal precioVenta,
         Boolean disponible,
-        Boolean activa,
-        @PositiveOrZero(message = "El IVA no puede ser negativo")
-        @DecimalMax(value = "100", message = "El IVA no puede superar el 100 %")
-        BigDecimal iva,                 // opcional: si no se indica se aplica el 10 % (RN-05)
+        @NotNull(message = "Activo o inactivo es obligatorio") Boolean activa,
+        BigDecimal iva,
+        main
         List<UUID> alergenosIds
 ) {
 }
