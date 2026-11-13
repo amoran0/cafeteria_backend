@@ -27,7 +27,6 @@ public record ProductoRequestDto(
         Boolean disponible,
         @NotNull(message = "Activo o inactivo es obligatorio") Boolean activa,
         BigDecimal iva,
-        main
         List<UUID> alergenosIds
 ) {
 }
