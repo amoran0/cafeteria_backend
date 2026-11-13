@@ -42,6 +42,16 @@ public class PedidoService {
         Cliente cliente = clienteRepositorio.findById(dto.clienteId())
                 .orElseThrow(() -> new ElementoNoEncontrado("No existe ningún cliente con id " + dto.clienteId()));
 
+        // RN-04: cada línea recibida debe tener entre 1 y 20 unidades ANTES de agrupar,
+        // para que una cantidad negativa o 0 no se "compense" con otra línea del mismo producto
+        for (int i = 0; i < dto.lineas().size(); i++) {
+            int cantidad = dto.lineas().get(i).cantidad();
+            if (cantidad < 1 || cantidad > 20) {
+                throw new ReglaNegocioException("La línea " + (i + 1) + " tiene " + cantidad
+                        + " unidades y cada línea debe tener entre 1 y 20 (RN-04)");
+            }
+        }
+
         // RN-04: agrupar líneas del mismo producto y comprobar límites
         Map<UUID, Integer> cantidades = new LinkedHashMap<>();
         dto.lineas().forEach(l -> cantidades.merge(l.productoId(), l.cantidad(), Integer::sum));
@@ -68,6 +78,11 @@ public class PedidoService {
             if (!Boolean.TRUE.equals(producto.getActiva())) {
                 throw new ReglaNegocioException("El producto '" + producto.getNombre() + "' (id " + producto.getIdProducto()
                         + ") está dado de baja y no se puede pedir (RN-02)");
+            }
+            if (!Boolean.TRUE.equals(producto.getCategoria().getDisponible())) {
+                throw new ReglaNegocioException("El producto '" + producto.getNombre() + "' (id " + producto.getIdProducto()
+                        + ") está agotado porque su categoría '" + producto.getCategoria().getNombre()
+                        + "' está agotada y no se puede pedir (RN-02)");
             }
             if (!Boolean.TRUE.equals(producto.getDisponible())) {
                 throw new ReglaNegocioException("El producto '" + producto.getNombre() + "' (id " + producto.getIdProducto()
@@ -123,6 +138,10 @@ public class PedidoService {
     @Transactional(readOnly = true)
     public Page<PedidoResponseDto> listar(UUID clienteId, EstadoPedido estado, LocalDateTime desde,
                                           LocalDateTime hasta, Pageable pageable) {
+        // hasta llega ya como el inicio del día siguiente, así que hasta <= desde equivale a hasta < desde en fechas
+        if (desde != null && hasta != null && !hasta.isAfter(desde)) {
+            throw new IllegalArgumentException("La fecha 'hasta' no puede ser anterior a la fecha 'desde'");
+        }
         // sin filtro = todos los estados y un rango de fechas amplio (Postgres no admite parámetros nulos aquí)
         List<EstadoPedido> estados = estado == null ? List.of(EstadoPedido.values()) : List.of(estado);
         LocalDateTime inicio = desde == null ? LocalDateTime.of(2000, 1, 1, 0, 0) : desde;
