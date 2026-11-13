@@ -1,6 +1,7 @@
 package es.safareyes.cafeteria.servicios;
 
 import es.safareyes.cafeteria.dtos.CuponRequestDto;
+import es.safareyes.cafeteria.dtos.CuponResponseDto;
 import es.safareyes.cafeteria.dtos.CuponValidacionResponseDto;
 import es.safareyes.cafeteria.excepciones.ElementoDuplicado;
 import es.safareyes.cafeteria.excepciones.ElementoNoEncontrado;
@@ -25,7 +26,7 @@ public class CuponService {
     private IPedidoRepositorio pedidoRepositorio;
     private CuponMapper mapper;
 
-    public Cupon crear(CuponRequestDto dto) {
+    public CuponResponseDto crear(CuponRequestDto dto) {
         String codigo = dto.codigo().trim().toUpperCase();
         if (cuponRepositorio.existsByCodigoIgnoreCase(codigo)) {
             throw new ElementoDuplicado("Ya existe un cupón con el código '" + codigo + "'; los códigos no pueden repetirse");
@@ -38,13 +39,14 @@ public class CuponService {
         }
         Cupon cupon = mapper.toEntity(dto);
         cupon.setCodigo(codigo);
-        return cuponRepositorio.save(cupon);
+        return mapper.toDto(cuponRepositorio.save(cupon));
     }
 
     public CuponValidacionResponseDto validar(String codigo, BigDecimal subtotal, String emailCliente) {
         Cupon cupon = buscarValido(codigo, subtotal, emailCliente);
         BigDecimal descuento = calcularDescuento(cupon, subtotal);
-        return new CuponValidacionResponseDto(cupon.getCodigo(), descuento, subtotal.subtract(descuento));
+        BigDecimal total = subtotal.subtract(descuento).setScale(2, RoundingMode.HALF_UP);
+        return new CuponValidacionResponseDto(cupon.getCodigo(), descuento, total);
     }
 
     /** RN-06: existe, activo, en vigencia, con usos disponibles, subtotal mínimo y email si es personal */
@@ -63,8 +65,9 @@ public class CuponService {
         if (cupon.getMaxUsos() != null && usos(cupon) >= cupon.getMaxUsos()) {
             throw new ReglaNegocioException("El cupón '" + cupon.getCodigo() + "' ya ha alcanzado su máximo de " + cupon.getMaxUsos() + " usos (RN-06)");
         }
-        if (cupon.getImporteMin() != null && subtotal.compareTo(cupon.getImporteMin()) < 0) {
-            throw new ReglaNegocioException("El cupón '" + cupon.getCodigo() + "' exige un subtotal mínimo de " + cupon.getImporteMin()
+        // RN-06: el subtotal debe SUPERAR el importe mínimo (si es igual, no vale)
+        if (cupon.getImporteMin() != null && subtotal.compareTo(cupon.getImporteMin()) <= 0) {
+            throw new ReglaNegocioException("El cupón '" + cupon.getCodigo() + "' exige un subtotal superior a " + cupon.getImporteMin()
                     + " € y el pedido suma " + subtotal + " € (RN-06)");
         }
         if (cupon.getEmail() != null && !cupon.getEmail().equalsIgnoreCase(emailCliente)) {
@@ -78,7 +81,7 @@ public class CuponService {
         BigDecimal descuento = cupon.getTipo() == TipoCupon.PORCENTAJE
                 ? subtotal.multiply(cupon.getValor()).divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP)
                 : cupon.getValor();
-        return descuento.min(subtotal).max(BigDecimal.ZERO);
+        return descuento.min(subtotal).max(BigDecimal.ZERO).setScale(2, RoundingMode.HALF_UP);
     }
 
     /** Usos = pedidos no cancelados con el cupón (al cancelar se devuelve el uso, RN-08) */

@@ -26,6 +26,8 @@ import java.util.UUID;
 @AllArgsConstructor
 @Transactional
 public class ProductoService {
+    private static final BigDecimal IVA_POR_DEFECTO = BigDecimal.TEN; // RN-05: hostelería, 10 %
+
     private IProductoRepositorio productoRepositorio;
     private ICategoriaRepositorio categoriaRepositorio;
     private IAlergenoRepositorio alergenoRepositorio;
@@ -37,8 +39,9 @@ public class ProductoService {
         return mapper.toDto(productoRepositorio.save(producto));
     }
 
+    /** Un producto dado de baja no forma parte de la carta, así que tampoco tiene detalle (RN-01) */
     public ProductoResponseDto obtenerProducto(UUID id) {
-        return mapper.toDto(buscar(id));
+        return mapper.toDto(buscarActivo(id));
     }
 
     public ProductoResponseDto modificarProducto(UUID id, ProductoRequestDto dto) {
@@ -48,14 +51,14 @@ public class ProductoService {
     }
 
     public ProductoResponseDto cambiarDisponibilidad(UUID id, Boolean disponible) {
-        Producto producto = buscar(id);
+        Producto producto = buscarActivo(id);
         producto.setDisponible(disponible);
         return mapper.toDto(productoRepositorio.save(producto));
     }
 
     /** RN-01: baja lógica */
     public void darDeBaja(UUID id) {
-        Producto producto = buscar(id);
+        Producto producto = buscarActivo(id);
         producto.setActiva(false);
         productoRepositorio.save(producto);
     }
@@ -84,11 +87,27 @@ public class ProductoService {
                 .orElseThrow(() -> new ElementoNoEncontrado("No existe ningún producto con id " + id));
     }
 
+    /** El PUT usa buscar() para que el ADMIN pueda reactivar un producto con "activa": true */
+    private Producto buscarActivo(UUID id) {
+        Producto producto = buscar(id);
+        if (!Boolean.TRUE.equals(producto.getActiva())) {
+            throw new ElementoNoEncontrado("El producto con id " + id + " está dado de baja (RN-01)");
+        }
+        return producto;
+    }
+
     private void actualizar(Producto producto, ProductoRequestDto dto) {
         producto.setCategoria(categoriaRepositorio.findById(dto.categoriaId())
                 .orElseThrow(() -> new ElementoNoEncontrado("No existe ninguna categoría con id " + dto.categoriaId())));
         mapper.actualizar(producto, dto);
         producto.setNombre(dto.nombre().trim());
+        if (producto.getIva() == null) {
+            producto.setIva(IVA_POR_DEFECTO);
+        }
+        // RF-03 / RN-02: un producto de una categoría agotada también está agotado
+        if (!Boolean.TRUE.equals(producto.getCategoria().getDisponible())) {
+            producto.setDisponible(false);
+        }
         List<UUID> ids = dto.alergenosIds() == null ? List.of() : dto.alergenosIds();
         List<Alergeno> alergenos = alergenoRepositorio.findAllById(ids);
         if (alergenos.size() != new HashSet<>(ids).size()) {
