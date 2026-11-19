@@ -1,0 +1,5522 @@
+{
+  "info": {
+    "name": "Cafetería API",
+    "description": "16 endpoints de /api/v1 con casos de éxito y de error según RN-01 a RN-10.\n\nUsa los datos de db/cafeteria.sql: ejecuta el script antes para partir de un estado limpio.\nPensada para ejecutarse en orden con el Collection Runner: algunas peticiones guardan ids (productoId, pedidoId, cuponCodigo...) que usan las siguientes.\nTodavía sin seguridad: no lleva tokens.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "1. Categorías",
+      "description": "Endpoints 7 y 8. RF-03: agotar o reponer una categoría entera.",
+      "item": [
+        {
+          "name": "GET listar categorías",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/categorias",
+            "description": "Devuelve cada categoría con su número de productos activos."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Es una lista con productos activos', () => {",
+                  "  const j = pm.response.json();",
+                  "  pm.expect(j).to.be.an('array').that.is.not.empty;",
+                  "  pm.expect(j[0]).to.have.property('cantidadProductosActivos');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "PATCH agotar categoría Zumos",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/categorias/{{categoriaZumos}}/disponibilidad",
+            "description": "RF-03: agota la categoría y todos sus productos.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"disponible\": false\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Categoría no disponible', () => pm.expect(pm.response.json().disponible).to.eql(false));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "RN-02 · POST pedido con producto de categoría agotada → 422",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/pedidos",
+            "description": "RN-02: un producto de una categoría agotada también está agotado y no se puede pedir.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"clienteId\": \"{{clienteCarlos}}\",\n  \"lineas\": [\n    {\n      \"productoId\": \"{{productoZumo}}\",\n      \"cantidad\": 1\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 422', () => pm.response.to.have.status(422));",
+                  "pm.test('Error con formato ProblemDetail', () => {",
+                  "  const j = pm.response.json();",
+                  "  pm.expect(j).to.have.property('status');",
+                  "  pm.expect(j).to.have.property('detail');",
+                  "  pm.expect(j).to.not.have.property('trace');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "PATCH reponer categoría Zumos",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/categorias/{{categoriaZumos}}/disponibilidad",
+            "description": "RF-03: repone la categoría y sus productos (deja la BD como estaba).",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"disponible\": true\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Categoría disponible', () => pm.expect(pm.response.json().disponible).to.eql(true));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "PATCH categoría inexistente → 404",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/categorias/{{idInexistente}}/disponibilidad",
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"disponible\": false\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 404', () => pm.response.to.have.status(404));",
+                  "pm.test('Error con formato ProblemDetail', () => {",
+                  "  const j = pm.response.json();",
+                  "  pm.expect(j).to.have.property('status');",
+                  "  pm.expect(j).to.have.property('detail');",
+                  "  pm.expect(j).to.not.have.property('trace');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "PATCH sin campo disponible → 400",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/categorias/{{categoriaZumos}}/disponibilidad",
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 400', () => pm.response.to.have.status(400));",
+                  "pm.test('Error con formato ProblemDetail', () => {",
+                  "  const j = pm.response.json();",
+                  "  pm.expect(j).to.have.property('status');",
+                  "  pm.expect(j).to.have.property('detail');",
+                  "  pm.expect(j).to.not.have.property('trace');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "PATCH id mal formado → 400",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/categorias/no-es-uuid/disponibilidad",
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"disponible\": true\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 400', () => pm.response.to.have.status(400));",
+                  "pm.test('Error con formato ProblemDetail', () => {",
+                  "  const j = pm.response.json();",
+                  "  pm.expect(j).to.have.property('status');",
+                  "  pm.expect(j).to.have.property('detail');",
+                  "  pm.expect(j).to.not.have.property('trace');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "2. Productos",
+      "description": "Endpoints 1 a 6. RF-02 (carta con filtros), RN-01 (baja lógica), RN-02 (agotado), RN-05 (IVA 10 % por defecto).",
+      "item": [
+        {
+          "name": "GET carta completa",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/productos",
+            "description": "Carta paginada. Formato: { content: [...], page: {...} }."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Paginado con content y page', () => {",
+                  "  const j = pm.response.json();",
+                  "  pm.expect(j).to.have.property('content');",
+                  "  pm.expect(j).to.have.property('page');",
+                  "});",
+                  "pm.test('RN-01: no aparecen productos dados de baja', () => {",
+                  "  pm.response.json().content.forEach(p => pm.expect(p.activa).to.eql(true));",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET carta por categoría",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/productos?categoriaId={{categoriaClasicos}}",
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Todos de la categoría', () => pm.response.json().content.forEach(p => pm.expect(p.categoriaId).to.eql(pm.variables.get('categoriaClasicos'))));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET carta por nombre",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/productos?nombre=café",
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET carta precio máximo 2 €",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/productos?precioMaximo=2",
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Precio <= 2', () => pm.response.json().content.forEach(p => pm.expect(p.precioVenta).to.be.at.most(2)));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET carta solo disponibles",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/productos?disponible=true",
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Todos disponibles', () => pm.response.json().content.forEach(p => pm.expect(p.disponible).to.eql(true)));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET carta sin gluten",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/productos?sinAlergenoId={{alergenoGluten}}",
+            "description": "RF-02: excluye los productos que contienen el alérgeno."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Ninguno contiene gluten', () => pm.response.json().content.forEach(p =>",
+                  "  pm.expect((p.alergenos || []).map(a => a.id)).to.not.include(pm.variables.get('alergenoGluten'))));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET carta paginada y ordenada",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/productos?page=0&size=3&sort=precioVenta,asc",
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Máximo 3 elementos', () => pm.expect(pm.response.json().content.length).to.be.at.most(3));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET carta ordenada por campo inexistente → 400",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/productos?sort=noExiste,asc",
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 400', () => pm.response.to.have.status(400));",
+                  "pm.test('Error con formato ProblemDetail', () => {",
+                  "  const j = pm.response.json();",
+                  "  pm.expect(j).to.have.property('status');",
+                  "  pm.expect(j).to.have.property('detail');",
+                  "  pm.expect(j).to.not.have.property('trace');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET carta precioMaximo no numérico → 400",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/productos?precioMaximo=abc",
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 400', () => pm.response.to.have.status(400));",
+                  "pm.test('Error con formato ProblemDetail', () => {",
+                  "  const j = pm.response.json();",
+                  "  pm.expect(j).to.have.property('status');",
+                  "  pm.expect(j).to.have.property('detail');",
+                  "  pm.expect(j).to.not.have.property('trace');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET detalle con alérgenos",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/productos/{{productoTostadaAguacate}}",
+            "description": "Tostada de aguacate: gluten, huevos y sésamo."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Trae 3 alérgenos con nombre', () => {",
+                  "  const a = pm.response.json().alergenos;",
+                  "  pm.expect(a).to.have.lengthOf(3);",
+                  "  pm.expect(a[0]).to.have.property('nombre');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET carta sin frutos de cáscara",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/productos?sinAlergenoId={{alergenoFrutosCascara}}&size=100",
+            "description": "Excluye la Tarta de Santiago, el brownie, la tarta de zanahoria y el suplemento de almendra."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('No aparece la Tarta de Santiago', () =>",
+                  "  pm.expect(pm.response.json().content.map(p => p.id)).to.not.include(pm.variables.get('productoTartaSantiago')));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET carta de Tés: no incluye el té rojo dado de baja",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/productos?categoriaId={{categoriaTes}}",
+            "description": "RN-01: el Té Rojo Pu-erh está dado de baja en el script."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "const ids = pm.response.json().content.map(p => p.id);",
+                  "pm.test('Sale el matcha', () => pm.expect(ids).to.include(pm.variables.get('productoMatcha')));",
+                  "pm.test('No sale el té rojo', () => pm.expect(ids).to.not.include(pm.variables.get('productoTeRojo')));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET carta de temporada: todo agotado",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/productos?categoriaId={{categoriaTemporada}}",
+            "description": "RN-02: la categoría de temporada está agotada, así que sus productos también."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Todos no disponibles', () => pm.response.json().content.forEach(p => pm.expect(p.disponible).to.eql(false)));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET detalle Tarta de Santiago: sin gluten",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/productos/{{productoTartaSantiago}}",
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "const a = pm.response.json().alergenos.map(x => x.id);",
+                  "pm.test('Lleva frutos de cáscara', () => pm.expect(a).to.include(pm.variables.get('alergenoFrutosCascara')));",
+                  "pm.test('No lleva gluten', () => pm.expect(a).to.not.include(pm.variables.get('alergenoGluten')));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET detalle Bagel de Salmón: agotado y con pescado",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/productos/{{productoBagelSalmon}}",
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "const j = pm.response.json();",
+                  "pm.test('Agotado', () => pm.expect(j.disponible).to.eql(false));",
+                  "pm.test('4 alérgenos, incluido pescado', () => {",
+                  "  pm.expect(j.alergenos).to.have.lengthOf(4);",
+                  "  pm.expect(j.alergenos.map(x => x.id)).to.include(pm.variables.get('alergenoPescado'));",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "RN-01 · GET detalle del té rojo (dado de baja en el script) → 404",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/productos/{{productoTeRojo}}",
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 404', () => pm.response.to.have.status(404));",
+                  "pm.test('Error con formato ProblemDetail', () => {",
+                  "  const j = pm.response.json();",
+                  "  pm.expect(j).to.have.property('status');",
+                  "  pm.expect(j).to.have.property('detail');",
+                  "  pm.expect(j).to.not.have.property('trace');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET detalle inexistente → 404",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/productos/{{idInexistente}}",
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 404', () => pm.response.to.have.status(404));",
+                  "pm.test('Error con formato ProblemDetail', () => {",
+                  "  const j = pm.response.json();",
+                  "  pm.expect(j).to.have.property('status');",
+                  "  pm.expect(j).to.have.property('detail');",
+                  "  pm.expect(j).to.not.have.property('trace');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET detalle id mal formado → 400",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/productos/no-es-uuid",
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 400', () => pm.response.to.have.status(400));",
+                  "pm.test('Error con formato ProblemDetail', () => {",
+                  "  const j = pm.response.json();",
+                  "  pm.expect(j).to.have.property('status');",
+                  "  pm.expect(j).to.have.property('detail');",
+                  "  pm.expect(j).to.not.have.property('trace');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST crear producto → 201",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/productos",
+            "description": "Guarda el id en {{productoId}} para las siguientes peticiones.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"categoriaId\": \"{{categoriaClasicos}}\",\n  \"nombre\": \"Café Cortado (Postman)\",\n  \"descripcion\": \"Espresso con un toque de leche\",\n  \"precioBase\": 1.2,\n  \"precioVenta\": 1.6,\n  \"disponible\": true,\n  \"activa\": true,\n  \"iva\": 10,\n  \"alergenosIds\": [\n    \"{{alergenoLacteos}}\"\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 201', () => pm.response.to.have.status(201));",
+                  "const j = pm.response.json();",
+                  "pm.collectionVariables.set('productoId', j.id);",
+                  "pm.test('Devuelve id y está activo', () => { pm.expect(j.id).to.be.a('string'); pm.expect(j.activa).to.eql(true); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "RN-05 · POST sin iva → se guarda 10",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/productos",
+            "description": "RN-05: si no se indica el IVA, se aplica el 10 % de hostelería.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"categoriaId\": \"{{categoriaClasicos}}\",\n  \"nombre\": \"Producto sin IVA (Postman)\",\n  \"descripcion\": \"Espresso con un toque de leche\",\n  \"precioBase\": 1.2,\n  \"precioVenta\": 1.6,\n  \"disponible\": true,\n  \"activa\": true\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 201', () => pm.response.to.have.status(201));",
+                  "pm.test('IVA 10 por defecto', () => pm.expect(Number(pm.response.json().iva)).to.eql(10));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST sin nombre → 400",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/productos",
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"categoriaId\": \"{{categoriaClasicos}}\",\n  \"descripcion\": \"Espresso con un toque de leche\",\n  \"precioBase\": 1.2,\n  \"precioVenta\": 1.6,\n  \"disponible\": true,\n  \"activa\": true,\n  \"iva\": 10,\n  \"alergenosIds\": [\n    \"{{alergenoLacteos}}\"\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 400', () => pm.response.to.have.status(400));",
+                  "pm.test('Error con formato ProblemDetail', () => {",
+                  "  const j = pm.response.json();",
+                  "  pm.expect(j).to.have.property('status');",
+                  "  pm.expect(j).to.have.property('detail');",
+                  "  pm.expect(j).to.not.have.property('trace');",
+                  "});",
+                  "pm.test('Indica el campo nombre', () => pm.expect(pm.response.json().errores).to.have.property('nombre'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST sin activa → 400",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/productos",
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"categoriaId\": \"{{categoriaClasicos}}\",\n  \"nombre\": \"Café Cortado (Postman)\",\n  \"descripcion\": \"Espresso con un toque de leche\",\n  \"precioBase\": 1.2,\n  \"precioVenta\": 1.6,\n  \"disponible\": true,\n  \"iva\": 10,\n  \"alergenosIds\": [\n    \"{{alergenoLacteos}}\"\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 400', () => pm.response.to.have.status(400));",
+                  "pm.test('Error con formato ProblemDetail', () => {",
+                  "  const j = pm.response.json();",
+                  "  pm.expect(j).to.have.property('status');",
+                  "  pm.expect(j).to.have.property('detail');",
+                  "  pm.expect(j).to.not.have.property('trace');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST precioVenta 0 → 400",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/productos",
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"categoriaId\": \"{{categoriaClasicos}}\",\n  \"nombre\": \"Café Cortado (Postman)\",\n  \"descripcion\": \"Espresso con un toque de leche\",\n  \"precioBase\": 1.2,\n  \"precioVenta\": 0,\n  \"disponible\": true,\n  \"activa\": true,\n  \"iva\": 10,\n  \"alergenosIds\": [\n    \"{{alergenoLacteos}}\"\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 400', () => pm.response.to.have.status(400));",
+                  "pm.test('Error con formato ProblemDetail', () => {",
+                  "  const j = pm.response.json();",
+                  "  pm.expect(j).to.have.property('status');",
+                  "  pm.expect(j).to.have.property('detail');",
+                  "  pm.expect(j).to.not.have.property('trace');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST precioVenta con 3 decimales → 400",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/productos",
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"categoriaId\": \"{{categoriaClasicos}}\",\n  \"nombre\": \"Café Cortado (Postman)\",\n  \"descripcion\": \"Espresso con un toque de leche\",\n  \"precioBase\": 1.2,\n  \"precioVenta\": 1.999,\n  \"disponible\": true,\n  \"activa\": true,\n  \"iva\": 10,\n  \"alergenosIds\": [\n    \"{{alergenoLacteos}}\"\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 400', () => pm.response.to.have.status(400));",
+                  "pm.test('Error con formato ProblemDetail', () => {",
+                  "  const j = pm.response.json();",
+                  "  pm.expect(j).to.have.property('status');",
+                  "  pm.expect(j).to.have.property('detail');",
+                  "  pm.expect(j).to.not.have.property('trace');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST precioBase negativo → 400",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/productos",
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"categoriaId\": \"{{categoriaClasicos}}\",\n  \"nombre\": \"Café Cortado (Postman)\",\n  \"descripcion\": \"Espresso con un toque de leche\",\n  \"precioBase\": -1,\n  \"precioVenta\": 1.6,\n  \"disponible\": true,\n  \"activa\": true,\n  \"iva\": 10,\n  \"alergenosIds\": [\n    \"{{alergenoLacteos}}\"\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 400', () => pm.response.to.have.status(400));",
+                  "pm.test('Error con formato ProblemDetail', () => {",
+                  "  const j = pm.response.json();",
+                  "  pm.expect(j).to.have.property('status');",
+                  "  pm.expect(j).to.have.property('detail');",
+                  "  pm.expect(j).to.not.have.property('trace');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST nombre de más de 100 caracteres → 400",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/productos",
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"categoriaId\": \"{{categoriaClasicos}}\",\n  \"nombre\": \"XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX\",\n  \"descripcion\": \"Espresso con un toque de leche\",\n  \"precioBase\": 1.2,\n  \"precioVenta\": 1.6,\n  \"disponible\": true,\n  \"activa\": true,\n  \"iva\": 10,\n  \"alergenosIds\": [\n    \"{{alergenoLacteos}}\"\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 400', () => pm.response.to.have.status(400));",
+                  "pm.test('Error con formato ProblemDetail', () => {",
+                  "  const j = pm.response.json();",
+                  "  pm.expect(j).to.have.property('status');",
+                  "  pm.expect(j).to.have.property('detail');",
+                  "  pm.expect(j).to.not.have.property('trace');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST categoría inexistente → 404",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/productos",
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"categoriaId\": \"{{idInexistente}}\",\n  \"nombre\": \"Café Cortado (Postman)\",\n  \"descripcion\": \"Espresso con un toque de leche\",\n  \"precioBase\": 1.2,\n  \"precioVenta\": 1.6,\n  \"disponible\": true,\n  \"activa\": true,\n  \"iva\": 10,\n  \"alergenosIds\": [\n    \"{{alergenoLacteos}}\"\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 404', () => pm.response.to.have.status(404));",
+                  "pm.test('Error con formato ProblemDetail', () => {",
+                  "  const j = pm.response.json();",
+                  "  pm.expect(j).to.have.property('status');",
+                  "  pm.expect(j).to.have.property('detail');",
+                  "  pm.expect(j).to.not.have.property('trace');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST alérgeno inexistente → 404",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/productos",
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"categoriaId\": \"{{categoriaClasicos}}\",\n  \"nombre\": \"Café Cortado (Postman)\",\n  \"descripcion\": \"Espresso con un toque de leche\",\n  \"precioBase\": 1.2,\n  \"precioVenta\": 1.6,\n  \"disponible\": true,\n  \"activa\": true,\n  \"iva\": 10,\n  \"alergenosIds\": [\n    \"{{idInexistente}}\"\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 404', () => pm.response.to.have.status(404));",
+                  "pm.test('Error con formato ProblemDetail', () => {",
+                  "  const j = pm.response.json();",
+                  "  pm.expect(j).to.have.property('status');",
+                  "  pm.expect(j).to.have.property('detail');",
+                  "  pm.expect(j).to.not.have.property('trace');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST JSON mal formado → 400",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/productos",
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{ \"nombre\": \"roto\", ",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 400', () => pm.response.to.have.status(400));",
+                  "pm.test('Error con formato ProblemDetail', () => {",
+                  "  const j = pm.response.json();",
+                  "  pm.expect(j).to.have.property('status');",
+                  "  pm.expect(j).to.have.property('detail');",
+                  "  pm.expect(j).to.not.have.property('trace');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST con id en la URL → 405",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/productos/{{productoId}}",
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"categoriaId\": \"{{categoriaClasicos}}\",\n  \"nombre\": \"Café Cortado (Postman)\",\n  \"descripcion\": \"Espresso con un toque de leche\",\n  \"precioBase\": 1.2,\n  \"precioVenta\": 1.6,\n  \"disponible\": true,\n  \"activa\": true,\n  \"iva\": 10,\n  \"alergenosIds\": [\n    \"{{alergenoLacteos}}\"\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 405', () => pm.response.to.have.status(405));",
+                  "pm.test('Error con formato ProblemDetail', () => {",
+                  "  const j = pm.response.json();",
+                  "  pm.expect(j).to.have.property('status');",
+                  "  pm.expect(j).to.have.property('detail');",
+                  "  pm.expect(j).to.not.have.property('trace');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "PUT modificar producto",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/productos/{{productoId}}",
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"categoriaId\": \"{{categoriaClasicos}}\",\n  \"nombre\": \"Café Cortado XL (Postman)\",\n  \"descripcion\": \"Espresso con un toque de leche\",\n  \"precioBase\": 1.2,\n  \"precioVenta\": 1.9,\n  \"disponible\": true,\n  \"activa\": true,\n  \"iva\": 10,\n  \"alergenosIds\": [\n    \"{{alergenoLacteos}}\"\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Cambia nombre y precio', () => {",
+                  "  const j = pm.response.json();",
+                  "  pm.expect(j.nombre).to.eql('Café Cortado XL (Postman)');",
+                  "  pm.expect(Number(j.precioVenta)).to.eql(1.9);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "PUT producto inexistente → 404",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/productos/{{idInexistente}}",
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"categoriaId\": \"{{categoriaClasicos}}\",\n  \"nombre\": \"Café Cortado (Postman)\",\n  \"descripcion\": \"Espresso con un toque de leche\",\n  \"precioBase\": 1.2,\n  \"precioVenta\": 1.6,\n  \"disponible\": true,\n  \"activa\": true,\n  \"iva\": 10,\n  \"alergenosIds\": [\n    \"{{alergenoLacteos}}\"\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 404', () => pm.response.to.have.status(404));",
+                  "pm.test('Error con formato ProblemDetail', () => {",
+                  "  const j = pm.response.json();",
+                  "  pm.expect(j).to.have.property('status');",
+                  "  pm.expect(j).to.have.property('detail');",
+                  "  pm.expect(j).to.not.have.property('trace');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "PUT sin precioVenta → 400",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/productos/{{productoId}}",
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"categoriaId\": \"{{categoriaClasicos}}\",\n  \"nombre\": \"Café Cortado (Postman)\",\n  \"descripcion\": \"Espresso con un toque de leche\",\n  \"precioBase\": 1.2,\n  \"disponible\": true,\n  \"activa\": true,\n  \"iva\": 10,\n  \"alergenosIds\": [\n    \"{{alergenoLacteos}}\"\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 400', () => pm.response.to.have.status(400));",
+                  "pm.test('Error con formato ProblemDetail', () => {",
+                  "  const j = pm.response.json();",
+                  "  pm.expect(j).to.have.property('status');",
+                  "  pm.expect(j).to.have.property('detail');",
+                  "  pm.expect(j).to.not.have.property('trace');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "PATCH agotar producto",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/productos/{{productoId}}/disponibilidad",
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"disponible\": false\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('No disponible', () => pm.expect(pm.response.json().disponible).to.eql(false));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "RN-02 · POST pedido con producto agotado → 422",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/pedidos",
+            "description": "RN-02: no se puede pedir un producto agotado.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"clienteId\": \"{{clienteCarlos}}\",\n  \"lineas\": [\n    {\n      \"productoId\": \"{{productoId}}\",\n      \"cantidad\": 1\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 422', () => pm.response.to.have.status(422));",
+                  "pm.test('Error con formato ProblemDetail', () => {",
+                  "  const j = pm.response.json();",
+                  "  pm.expect(j).to.have.property('status');",
+                  "  pm.expect(j).to.have.property('detail');",
+                  "  pm.expect(j).to.not.have.property('trace');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "PATCH reponer producto",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/productos/{{productoId}}/disponibilidad",
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"disponible\": true\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Disponible', () => pm.expect(pm.response.json().disponible).to.eql(true));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "PATCH disponibilidad sin body → 400",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "url": "{{baseUrl}}/productos/{{productoId}}/disponibilidad",
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 400', () => pm.response.to.have.status(400));",
+                  "pm.test('Error con formato ProblemDetail', () => {",
+                  "  const j = pm.response.json();",
+                  "  pm.expect(j).to.have.property('status');",
+                  "  pm.expect(j).to.have.property('detail');",
+                  "  pm.expect(j).to.not.have.property('trace');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "PATCH disponibilidad valor no booleano → 400",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/productos/{{productoId}}/disponibilidad",
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"disponible\": \"quizas\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 400', () => pm.response.to.have.status(400));",
+                  "pm.test('Error con formato ProblemDetail', () => {",
+                  "  const j = pm.response.json();",
+                  "  pm.expect(j).to.have.property('status');",
+                  "  pm.expect(j).to.have.property('detail');",
+                  "  pm.expect(j).to.not.have.property('trace');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "RN-01 · DELETE baja lógica → 204",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": "{{baseUrl}}/productos/{{productoId}}",
+            "description": "RN-01: la baja es lógica (activa = false), no se borra la fila."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 204', () => pm.response.to.have.status(204));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "RN-01 · GET detalle de producto dado de baja → 404",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/productos/{{productoId}}",
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 404', () => pm.response.to.have.status(404));",
+                  "pm.test('Error con formato ProblemDetail', () => {",
+                  "  const j = pm.response.json();",
+                  "  pm.expect(j).to.have.property('status');",
+                  "  pm.expect(j).to.have.property('detail');",
+                  "  pm.expect(j).to.not.have.property('trace');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "RN-01 · PATCH disponibilidad de producto dado de baja → 404",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/productos/{{productoId}}/disponibilidad",
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"disponible\": true\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 404', () => pm.response.to.have.status(404));",
+                  "pm.test('Error con formato ProblemDetail', () => {",
+                  "  const j = pm.response.json();",
+                  "  pm.expect(j).to.have.property('status');",
+                  "  pm.expect(j).to.have.property('detail');",
+                  "  pm.expect(j).to.not.have.property('trace');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "RN-02 · POST pedido con producto dado de baja → 422",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/pedidos",
+            "description": "RN-02: no se puede pedir un producto dado de baja.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"clienteId\": \"{{clienteCarlos}}\",\n  \"lineas\": [\n    {\n      \"productoId\": \"{{productoId}}\",\n      \"cantidad\": 1\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 422', () => pm.response.to.have.status(422));",
+                  "pm.test('Error con formato ProblemDetail', () => {",
+                  "  const j = pm.response.json();",
+                  "  pm.expect(j).to.have.property('status');",
+                  "  pm.expect(j).to.have.property('detail');",
+                  "  pm.expect(j).to.not.have.property('trace');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "RN-01 · DELETE producto ya dado de baja → 404",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": "{{baseUrl}}/productos/{{productoId}}",
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 404', () => pm.response.to.have.status(404));",
+                  "pm.test('Error con formato ProblemDetail', () => {",
+                  "  const j = pm.response.json();",
+                  "  pm.expect(j).to.have.property('status');",
+                  "  pm.expect(j).to.have.property('detail');",
+                  "  pm.expect(j).to.not.have.property('trace');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "DELETE producto inexistente → 404",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": "{{baseUrl}}/productos/{{idInexistente}}",
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 404', () => pm.response.to.have.status(404));",
+                  "pm.test('Error con formato ProblemDetail', () => {",
+                  "  const j = pm.response.json();",
+                  "  pm.expect(j).to.have.property('status');",
+                  "  pm.expect(j).to.have.property('detail');",
+                  "  pm.expect(j).to.not.have.property('trace');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "3. Cupones",
+      "description": "Endpoints 13 y 14. RN-06 (validez de un cupón). Fecha de referencia del script: hoy dentro de 2026.",
+      "item": [
+        {
+          "name": "POST crear cupón porcentaje → 201",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/cupones",
+            "description": "El código se genera solo (POSTMAN + timestamp) para poder repetir la colección.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"codigo\": \"{{cuponCodigo}}\",\n  \"tipo\": \"PORCENTAJE\",\n  \"valor\": 20,\n  \"importeMin\": 5.0,\n  \"maxUsos\": 10,\n  \"fechaInicio\": \"2026-01-01\",\n  \"fechaFin\": \"2026-12-31\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 201', () => pm.response.to.have.status(201));",
+                  "pm.test('Devuelve el cupón creado', () => pm.expect(pm.response.json().codigo).to.eql(pm.collectionVariables.get('cuponCodigo')));"
+                ]
+              }
+            },
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.collectionVariables.set('cuponCodigo', 'POSTMAN' + Date.now());"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST crear cupón fijo de 50 € (para RN-05) → 201",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/cupones",
+            "description": "Cupón FIJO mayor que cualquier pedido: sirve para comprobar que el total nunca es negativo.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"codigo\": \"{{cuponFijoCodigo}}\",\n  \"tipo\": \"FIJO\",\n  \"valor\": 50,\n  \"importeMin\": 0,\n  \"maxUsos\": 10,\n  \"fechaInicio\": \"2026-01-01\",\n  \"fechaFin\": \"2026-12-31\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 201', () => pm.response.to.have.status(201));"
+                ]
+              }
+            },
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.collectionVariables.set('cuponFijoCodigo', 'FIJO' + Date.now());"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST crear cupón personal → 201",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/cupones",
+            "description": "RN-06: con email, el cupón solo lo puede usar ese cliente.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"codigo\": \"{{codigoPersonal}}\",\n  \"tipo\": \"PORCENTAJE\",\n  \"valor\": 20,\n  \"importeMin\": 5.0,\n  \"maxUsos\": 10,\n  \"fechaInicio\": \"2026-01-01\",\n  \"fechaFin\": \"2026-12-31\",\n  \"email\": \"maria.lopez@yahoo.com\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 201', () => pm.response.to.have.status(201));",
+                  "pm.test('Guarda el email', () => pm.expect(pm.response.json().email).to.eql('maria.lopez@yahoo.com'));"
+                ]
+              }
+            },
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.variables.set('codigoPersonal', 'PERSONAL' + Date.now());"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST código duplicado (en minúsculas) → 409",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/cupones",
+            "description": "Los códigos no pueden repetirse, aunque cambien mayúsculas y minúsculas.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"codigo\": \"{{cuponCodigoMinus}}\",\n  \"tipo\": \"PORCENTAJE\",\n  \"valor\": 20,\n  \"importeMin\": 5.0,\n  \"maxUsos\": 10,\n  \"fechaInicio\": \"2026-01-01\",\n  \"fechaFin\": \"2026-12-31\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 409', () => pm.response.to.have.status(409));",
+                  "pm.test('Error con formato ProblemDetail', () => {",
+                  "  const j = pm.response.json();",
+                  "  pm.expect(j).to.have.property('status');",
+                  "  pm.expect(j).to.have.property('detail');",
+                  "  pm.expect(j).to.not.have.property('trace');",
+                  "});"
+                ]
+              }
+            },
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.variables.set('cuponCodigoMinus', pm.collectionVariables.get('cuponCodigo').toLowerCase());"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST porcentaje mayor de 100 → 422",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/cupones",
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"codigo\": \"{{tmp}}\",\n  \"tipo\": \"PORCENTAJE\",\n  \"valor\": 150,\n  \"importeMin\": 5.0,\n  \"maxUsos\": 10,\n  \"fechaInicio\": \"2026-01-01\",\n  \"fechaFin\": \"2026-12-31\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 422', () => pm.response.to.have.status(422));",
+                  "pm.test('Error con formato ProblemDetail', () => {",
+                  "  const j = pm.response.json();",
+                  "  pm.expect(j).to.have.property('status');",
+                  "  pm.expect(j).to.have.property('detail');",
+                  "  pm.expect(j).to.not.have.property('trace');",
+                  "});"
+                ]
+              }
+            },
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.variables.set('tmp', 'MAL' + Date.now());"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST fecha fin anterior a inicio → 422",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/cupones",
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"codigo\": \"{{tmp}}\",\n  \"tipo\": \"PORCENTAJE\",\n  \"valor\": 20,\n  \"importeMin\": 5.0,\n  \"maxUsos\": 10,\n  \"fechaInicio\": \"2026-12-31\",\n  \"fechaFin\": \"2026-01-01\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 422', () => pm.response.to.have.status(422));",
+                  "pm.test('Error con formato ProblemDetail', () => {",
+                  "  const j = pm.response.json();",
+                  "  pm.expect(j).to.have.property('status');",
+                  "  pm.expect(j).to.have.property('detail');",
+                  "  pm.expect(j).to.not.have.property('trace');",
+                  "});"
+                ]
+              }
+            },
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.variables.set('tmp', 'MAL' + Date.now());"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST sin código → 400",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/cupones",
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"tipo\": \"PORCENTAJE\",\n  \"valor\": 20,\n  \"importeMin\": 5.0,\n  \"maxUsos\": 10,\n  \"fechaInicio\": \"2026-01-01\",\n  \"fechaFin\": \"2026-12-31\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 400', () => pm.response.to.have.status(400));",
+                  "pm.test('Error con formato ProblemDetail', () => {",
+                  "  const j = pm.response.json();",
+                  "  pm.expect(j).to.have.property('status');",
+                  "  pm.expect(j).to.have.property('detail');",
+                  "  pm.expect(j).to.not.have.property('trace');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST sin tipo → 400",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/cupones",
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"codigo\": \"X1\",\n  \"valor\": 20,\n  \"importeMin\": 5.0,\n  \"maxUsos\": 10,\n  \"fechaInicio\": \"2026-01-01\",\n  \"fechaFin\": \"2026-12-31\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 400', () => pm.response.to.have.status(400));",
+                  "pm.test('Error con formato ProblemDetail', () => {",
+                  "  const j = pm.response.json();",
+                  "  pm.expect(j).to.have.property('status');",
+                  "  pm.expect(j).to.have.property('detail');",
+                  "  pm.expect(j).to.not.have.property('trace');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST tipo inválido → 400",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/cupones",
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"codigo\": \"X2\",\n  \"tipo\": \"REGALO\",\n  \"valor\": 20,\n  \"importeMin\": 5.0,\n  \"maxUsos\": 10,\n  \"fechaInicio\": \"2026-01-01\",\n  \"fechaFin\": \"2026-12-31\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 400', () => pm.response.to.have.status(400));",
+                  "pm.test('Error con formato ProblemDetail', () => {",
+                  "  const j = pm.response.json();",
+                  "  pm.expect(j).to.have.property('status');",
+                  "  pm.expect(j).to.have.property('detail');",
+                  "  pm.expect(j).to.not.have.property('trace');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST valor negativo → 400",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/cupones",
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"codigo\": \"X3\",\n  \"tipo\": \"PORCENTAJE\",\n  \"valor\": -5,\n  \"importeMin\": 5.0,\n  \"maxUsos\": 10,\n  \"fechaInicio\": \"2026-01-01\",\n  \"fechaFin\": \"2026-12-31\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 400', () => pm.response.to.have.status(400));",
+                  "pm.test('Error con formato ProblemDetail', () => {",
+                  "  const j = pm.response.json();",
+                  "  pm.expect(j).to.have.property('status');",
+                  "  pm.expect(j).to.have.property('detail');",
+                  "  pm.expect(j).to.not.have.property('trace');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST importe mínimo negativo → 400",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/cupones",
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"codigo\": \"X4\",\n  \"tipo\": \"PORCENTAJE\",\n  \"valor\": 20,\n  \"importeMin\": -1,\n  \"maxUsos\": 10,\n  \"fechaInicio\": \"2026-01-01\",\n  \"fechaFin\": \"2026-12-31\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 400', () => pm.response.to.have.status(400));",
+                  "pm.test('Error con formato ProblemDetail', () => {",
+                  "  const j = pm.response.json();",
+                  "  pm.expect(j).to.have.property('status');",
+                  "  pm.expect(j).to.have.property('detail');",
+                  "  pm.expect(j).to.not.have.property('trace');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST maxUsos 0 → 400",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/cupones",
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"codigo\": \"X5\",\n  \"tipo\": \"PORCENTAJE\",\n  \"valor\": 20,\n  \"importeMin\": 5.0,\n  \"maxUsos\": 0,\n  \"fechaInicio\": \"2026-01-01\",\n  \"fechaFin\": \"2026-12-31\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 400', () => pm.response.to.have.status(400));",
+                  "pm.test('Error con formato ProblemDetail', () => {",
+                  "  const j = pm.response.json();",
+                  "  pm.expect(j).to.have.property('status');",
+                  "  pm.expect(j).to.have.property('detail');",
+                  "  pm.expect(j).to.not.have.property('trace');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST email mal formado → 400",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/cupones",
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"codigo\": \"X6\",\n  \"tipo\": \"PORCENTAJE\",\n  \"valor\": 20,\n  \"importeMin\": 5.0,\n  \"maxUsos\": 10,\n  \"fechaInicio\": \"2026-01-01\",\n  \"fechaFin\": \"2026-12-31\",\n  \"email\": \"no-es-email\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 400', () => pm.response.to.have.status(400));",
+                  "pm.test('Error con formato ProblemDetail', () => {",
+                  "  const j = pm.response.json();",
+                  "  pm.expect(j).to.have.property('status');",
+                  "  pm.expect(j).to.have.property('detail');",
+                  "  pm.expect(j).to.not.have.property('trace');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST fecha mal formada → 400",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/cupones",
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"codigo\": \"X7\",\n  \"tipo\": \"PORCENTAJE\",\n  \"valor\": 20,\n  \"importeMin\": 5.0,\n  \"maxUsos\": 10,\n  \"fechaInicio\": \"2026-01-01\",\n  \"fechaFin\": \"31/12/2026\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 400', () => pm.response.to.have.status(400));",
+                  "pm.test('Error con formato ProblemDetail', () => {",
+                  "  const j = pm.response.json();",
+                  "  pm.expect(j).to.have.property('status');",
+                  "  pm.expect(j).to.have.property('detail');",
+                  "  pm.expect(j).to.not.have.property('trace');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "RN-06 · validar CAFEMATIN con subtotal 10 → 200",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/cupones/validar",
+            "description": "CAFEMATIN: FIJO 1 €, mínimo 5 €. Descuento 1.00, total 9.00.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"codigo\": \"CAFEMATIN\",\n  \"subtotal\": 10.0\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Descuento 1 y total 9', () => {",
+                  "  const j = pm.response.json();",
+                  "  pm.expect(Number(j.descuento)).to.eql(1);",
+                  "  pm.expect(Number(j.total)).to.eql(9);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "RN-06 · validar BIENVENIDACAFE 15 % con subtotal 10 → 200",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/cupones/validar",
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"codigo\": \"BIENVENIDACAFE\",\n  \"subtotal\": 10.0\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Descuento 1.50 y total 8.50', () => {",
+                  "  const j = pm.response.json();",
+                  "  pm.expect(Number(j.descuento)).to.eql(1.5);",
+                  "  pm.expect(Number(j.total)).to.eql(8.5);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "RN-06 · validar en minúsculas → 200",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/cupones/validar",
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"codigo\": \"cafematin\",\n  \"subtotal\": 10.0\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "RN-06 · subtotal igual al mínimo → 422",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/cupones/validar",
+            "description": "RN-06: el subtotal debe SUPERAR el importe mínimo (CAFEMATIN exige más de 5 €).",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"codigo\": \"CAFEMATIN\",\n  \"subtotal\": 5.0\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 422', () => pm.response.to.have.status(422));",
+                  "pm.test('Error con formato ProblemDetail', () => {",
+                  "  const j = pm.response.json();",
+                  "  pm.expect(j).to.have.property('status');",
+                  "  pm.expect(j).to.have.property('detail');",
+                  "  pm.expect(j).to.not.have.property('trace');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "RN-06 · subtotal por debajo del mínimo → 422",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/cupones/validar",
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"codigo\": \"CAFEMATIN\",\n  \"subtotal\": 3.0\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 422', () => pm.response.to.have.status(422));",
+                  "pm.test('Error con formato ProblemDetail', () => {",
+                  "  const j = pm.response.json();",
+                  "  pm.expect(j).to.have.property('status');",
+                  "  pm.expect(j).to.have.property('detail');",
+                  "  pm.expect(j).to.not.have.property('trace');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "RN-06 · cupón caducado (DULCE20) → 422",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/cupones/validar",
+            "description": "DULCE20 solo vale de marzo a mayo de 2026.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"codigo\": \"DULCE20\",\n  \"subtotal\": 20.0\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 422', () => pm.response.to.have.status(422));",
+                  "pm.test('Error con formato ProblemDetail', () => {",
+                  "  const j = pm.response.json();",
+                  "  pm.expect(j).to.have.property('status');",
+                  "  pm.expect(j).to.have.property('detail');",
+                  "  pm.expect(j).to.not.have.property('trace');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "RN-06 · cupón caducado (CROSSANTFREE) → 422",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/cupones/validar",
+            "description": "CROSSANTFREE solo vale en octubre de 2026.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"codigo\": \"CROSSANTFREE\",\n  \"subtotal\": 20.0\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 422', () => pm.response.to.have.status(422));",
+                  "pm.test('Error con formato ProblemDetail', () => {",
+                  "  const j = pm.response.json();",
+                  "  pm.expect(j).to.have.property('status');",
+                  "  pm.expect(j).to.have.property('detail');",
+                  "  pm.expect(j).to.not.have.property('trace');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "RN-06 · validar OTONO10 con subtotal 10 → 200",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/cupones/validar",
+            "description": "OTONO10: 10 %, mínimo 3 €, del 22/09 al 20/12/2026.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"codigo\": \"OTONO10\",\n  \"subtotal\": 10.0\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Descuento 1 y total 9', () => {",
+                  "  const j = pm.response.json();",
+                  "  pm.expect(Number(j.descuento)).to.eql(1);",
+                  "  pm.expect(Number(j.total)).to.eql(9);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "RN-06 · cupón que aún no ha empezado (NAVIDAD2) → 422",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/cupones/validar",
+            "description": "NAVIDAD2 empieza el 01/12/2026.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"codigo\": \"NAVIDAD2\",\n  \"subtotal\": 20.0\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 422', () => pm.response.to.have.status(422));",
+                  "pm.test('Error con formato ProblemDetail', () => {",
+                  "  const j = pm.response.json();",
+                  "  pm.expect(j).to.have.property('status');",
+                  "  pm.expect(j).to.have.property('detail');",
+                  "  pm.expect(j).to.not.have.property('trace');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "RN-06 · cupón inexistente → 404",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/cupones/validar",
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"codigo\": \"NOEXISTE\",\n  \"subtotal\": 10.0\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 404', () => pm.response.to.have.status(404));",
+                  "pm.test('Error con formato ProblemDetail', () => {",
+                  "  const j = pm.response.json();",
+                  "  pm.expect(j).to.have.property('status');",
+                  "  pm.expect(j).to.have.property('detail');",
+                  "  pm.expect(j).to.not.have.property('trace');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "RN-06 · cupón personal con su email → 200",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/cupones/validar",
+            "description": "SOLOMARIA: 30 %, solo para maria.lopez@yahoo.com.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"codigo\": \"SOLOMARIA\",\n  \"subtotal\": 10.0,\n  \"email\": \"maria.lopez@yahoo.com\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Descuento 3', () => pm.expect(Number(pm.response.json().descuento)).to.eql(3));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "RN-06 · cupón personal con otro email → 422",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/cupones/validar",
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"codigo\": \"SOLOMARIA\",\n  \"subtotal\": 10.0,\n  \"email\": \"carlos.gomez@gmail.com\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 422', () => pm.response.to.have.status(422));",
+                  "pm.test('Error con formato ProblemDetail', () => {",
+                  "  const j = pm.response.json();",
+                  "  pm.expect(j).to.have.property('status');",
+                  "  pm.expect(j).to.have.property('detail');",
+                  "  pm.expect(j).to.not.have.property('trace');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "RN-06 · cupón personal sin email → 422",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/cupones/validar",
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"codigo\": \"SOLOMARIA\",\n  \"subtotal\": 10.0\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 422', () => pm.response.to.have.status(422));",
+                  "pm.test('Error con formato ProblemDetail', () => {",
+                  "  const j = pm.response.json();",
+                  "  pm.expect(j).to.have.property('status');",
+                  "  pm.expect(j).to.have.property('detail');",
+                  "  pm.expect(j).to.not.have.property('trace');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "RN-05 · cupón fijo mayor que el subtotal → total 0",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/cupones/validar",
+            "description": "El descuento nunca deja el total en negativo.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"codigo\": \"{{cuponFijoCodigo}}\",\n  \"subtotal\": 10.0\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Total 0, no negativo', () => pm.expect(Number(pm.response.json().total)).to.eql(0));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "validar sin código → 400",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/cupones/validar",
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"subtotal\": 10.0\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 400', () => pm.response.to.have.status(400));",
+                  "pm.test('Error con formato ProblemDetail', () => {",
+                  "  const j = pm.response.json();",
+                  "  pm.expect(j).to.have.property('status');",
+                  "  pm.expect(j).to.have.property('detail');",
+                  "  pm.expect(j).to.not.have.property('trace');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "validar sin subtotal → 400",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/cupones/validar",
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"codigo\": \"CAFEMATIN\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 400', () => pm.response.to.have.status(400));",
+                  "pm.test('Error con formato ProblemDetail', () => {",
+                  "  const j = pm.response.json();",
+                  "  pm.expect(j).to.have.property('status');",
+                  "  pm.expect(j).to.have.property('detail');",
+                  "  pm.expect(j).to.not.have.property('trace');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "validar subtotal negativo → 400",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/cupones/validar",
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"codigo\": \"CAFEMATIN\",\n  \"subtotal\": -1\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 400', () => pm.response.to.have.status(400));",
+                  "pm.test('Error con formato ProblemDetail', () => {",
+                  "  const j = pm.response.json();",
+                  "  pm.expect(j).to.have.property('status');",
+                  "  pm.expect(j).to.have.property('detail');",
+                  "  pm.expect(j).to.not.have.property('trace');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "4. Pedidos",
+      "description": "Endpoints 9 a 12. RN-02 a RN-09.",
+      "item": [
+        {
+          "name": "POST crear pedido con cupón → 201",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/pedidos",
+            "description": "2 cafés con leche (1.80) + 1 croissant (1.90) = 5.50 €. CAFEMATIN resta 1 € → 4.50.\nRN-05: base = 4.50 / 1.10 = 4.09, IVA = 0.41. Guarda el id en {{pedidoId}}.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"clienteId\": \"{{clienteCarlos}}\",\n  \"lineas\": [\n    {\n      \"productoId\": \"{{productoCafeLeche}}\",\n      \"cantidad\": 2\n    },\n    {\n      \"productoId\": \"{{productoCroissant}}\",\n      \"cantidad\": 1\n    }\n  ],\n  \"codigoCupon\": \"CAFEMATIN\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 201', () => pm.response.to.have.status(201));",
+                  "const j = pm.response.json();",
+                  "pm.collectionVariables.set('pedidoId', j.id);",
+                  "pm.test('RN-08: nace en PENDIENTE', () => pm.expect(j.estado).to.eql('PENDIENTE'));",
+                  "pm.test('RN-09: tiene número de turno', () => pm.expect(j.numeroTurno).to.be.at.least(1));",
+                  "pm.test('RN-03: guarda el precio vigente en cada línea', () => {",
+                  "  const l = j.lineas.find(x => x.productoId === pm.variables.get('productoCafeLeche'));",
+                  "  pm.expect(Number(l.precioUnitario)).to.eql(1.8);",
+                  "});",
+                  "pm.test('RN-05/RN-07: importes con cupón CAFEMATIN', () => {",
+                  "  pm.expect(Number(j.subtotal)).to.eql(5.5);",
+                  "  pm.expect(Number(j.descuento)).to.eql(1);",
+                  "  pm.expect(Number(j.total)).to.eql(4.5);",
+                  "  pm.expect(Number(j.baseImponible)).to.eql(4.09);",
+                  "  pm.expect(Number(j.cuotaIva)).to.eql(0.41);",
+                  "  pm.expect(j.codigoCupon).to.eql('CAFEMATIN');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "RN-04 · líneas del mismo producto se agrupan → 201",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/pedidos",
+            "description": "Dos líneas de espresso (3 + 2) se guardan como una sola línea de 5.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"clienteId\": \"{{clienteCarlos}}\",\n  \"lineas\": [\n    {\n      \"productoId\": \"{{productoEspresso}}\",\n      \"cantidad\": 3\n    },\n    {\n      \"productoId\": \"{{productoEspresso}}\",\n      \"cantidad\": 2\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 201', () => pm.response.to.have.status(201));",
+                  "const j = pm.response.json();",
+                  "pm.test('Una línea con 5 unidades', () => {",
+                  "  pm.expect(j.lineas).to.have.lengthOf(1);",
+                  "  pm.expect(j.lineas[0].cantidad).to.eql(5);",
+                  "});",
+                  "pm.test('Sin cupón no hay descuento', () => pm.expect(Number(j.descuento)).to.eql(0));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "RN-09 · el turno aumenta en 1 respecto al anterior",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/pedidos",
+            "description": "Crea otro pedido y comprueba que su turno es el del anterior más uno.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"clienteId\": \"{{clienteCarlos}}\",\n  \"lineas\": [\n    {\n      \"productoId\": \"{{productoEspresso}}\",\n      \"cantidad\": 1\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 201', () => pm.response.to.have.status(201));",
+                  "pm.test('Turno mayor que el del primer pedido', () =>",
+                  "  pm.expect(pm.response.json().numeroTurno).to.be.above(Number(pm.variables.get('turnoPrimero'))));"
+                ]
+              }
+            },
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.sendRequest(pm.variables.replaceIn('{{baseUrl}}/pedidos/{{pedidoId}}'), (e, r) => {",
+                  "  if (!e) pm.variables.set('turnoPrimero', r.json().numeroTurno);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "RN-05 · cupón mayor que el subtotal → total 0",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/pedidos",
+            "description": "Usa el cupón FIJO de 50 € creado en la carpeta Cupones. Espresso 1.50 → descuento 1.50, total 0.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"clienteId\": \"{{clienteCarlos}}\",\n  \"lineas\": [\n    {\n      \"productoId\": \"{{productoEspresso}}\",\n      \"cantidad\": 1\n    }\n  ],\n  \"codigoCupon\": \"{{cuponFijoCodigo}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 201', () => pm.response.to.have.status(201));",
+                  "const j = pm.response.json();",
+                  "pm.test('Descuento limitado al subtotal y total 0', () => {",
+                  "  pm.expect(Number(j.descuento)).to.eql(1.5);",
+                  "  pm.expect(Number(j.total)).to.eql(0);",
+                  "  pm.expect(Number(j.baseImponible)).to.eql(0);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "RN-07 · cupón + DNI de socio → se aplica el mayor",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/pedidos",
+            "description": "RN-07: cupón y descuento de socio FitZone (10 %) no se acumulan, se aplica el mayor.\nSubtotal 10.80 (6 cafés con leche): CAFEMATIN = 1 €, socio = 1.08 €.\nSi FitZone está levantado y el DNI es socio activo: descuento 1.08 y sin cupón.\nSi FitZone no responde: descuento 1.00 con CAFEMATIN.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"clienteId\": \"{{clienteCarlos}}\",\n  \"lineas\": [\n    {\n      \"productoId\": \"{{productoCafeLeche}}\",\n      \"cantidad\": 6\n    }\n  ],\n  \"codigoCupon\": \"CAFEMATIN\",\n  \"dniSocio\": \"12345678A\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 201', () => pm.response.to.have.status(201));",
+                  "const j = pm.response.json();",
+                  "pm.test('Solo un descuento (1.00 o 1.08), nunca la suma', () =>",
+                  "  pm.expect(Number(j.descuento)).to.be.oneOf([1, 1.08]));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "RN-07 · solo DNI de socio",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/pedidos",
+            "description": "Con FitZone levantado: 10 % de descuento. Sin FitZone: sin descuento.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"clienteId\": \"{{clienteCarlos}}\",\n  \"lineas\": [\n    {\n      \"productoId\": \"{{productoCafeLeche}}\",\n      \"cantidad\": 2\n    }\n  ],\n  \"dniSocio\": \"12345678A\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 201', () => pm.response.to.have.status(201));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST pedido para cancelar (con cupón CUMPLECAFEE) → 201",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/pedidos",
+            "description": "Espresso (1.50) + zumo (2.80) = 4.30. CUMPLECAFEE 50 % → total 2.15. Guarda el id en {{pedidoCancelarId}}.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"clienteId\": \"{{clienteCarlos}}\",\n  \"lineas\": [\n    {\n      \"productoId\": \"{{productoEspresso}}\",\n      \"cantidad\": 1\n    },\n    {\n      \"productoId\": \"{{productoZumo}}\",\n      \"cantidad\": 1\n    }\n  ],\n  \"codigoCupon\": \"CUMPLECAFEE\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 201', () => pm.response.to.have.status(201));",
+                  "const j = pm.response.json();",
+                  "pm.collectionVariables.set('pedidoCancelarId', j.id);",
+                  "pm.test('Total 2.15', () => pm.expect(Number(j.total)).to.eql(2.15));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST pedido variado con productos nuevos → 201",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/pedidos",
+            "description": "Irene: flat white (3.00) + tarta de Santiago (3.90) + 2 suplementos de avena (0.80) = 7.70.\nOTONO10 (10 %, mínimo 3 €): descuento 0.77, total 6.93, base 6.30, IVA 0.63.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"clienteId\": \"{{clienteIrene}}\",\n  \"lineas\": [\n    {\n      \"productoId\": \"{{productoFlatWhite}}\",\n      \"cantidad\": 1\n    },\n    {\n      \"productoId\": \"{{productoTartaSantiago}}\",\n      \"cantidad\": 1\n    },\n    {\n      \"productoId\": \"{{productoSuplementoAvena}}\",\n      \"cantidad\": 2\n    }\n  ],\n  \"codigoCupon\": \"OTONO10\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 201', () => pm.response.to.have.status(201));",
+                  "const j = pm.response.json();",
+                  "pm.test('3 líneas', () => pm.expect(j.lineas).to.have.lengthOf(3));",
+                  "pm.test('Importes con OTONO10', () => {",
+                  "  pm.expect(Number(j.subtotal)).to.eql(7.7);",
+                  "  pm.expect(Number(j.descuento)).to.eql(0.77);",
+                  "  pm.expect(Number(j.total)).to.eql(6.93);",
+                  "  pm.expect(Number(j.baseImponible)).to.eql(6.3);",
+                  "  pm.expect(Number(j.cuotaIva)).to.eql(0.63);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "RN-01 · pedido con el té rojo (dado de baja en el script) → 422",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/pedidos",
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"clienteId\": \"{{clienteCarlos}}\",\n  \"lineas\": [\n    {\n      \"productoId\": \"{{productoTeRojo}}\",\n      \"cantidad\": 1\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 422', () => pm.response.to.have.status(422));",
+                  "pm.test('Error con formato ProblemDetail', () => {",
+                  "  const j = pm.response.json();",
+                  "  pm.expect(j).to.have.property('status');",
+                  "  pm.expect(j).to.have.property('detail');",
+                  "  pm.expect(j).to.not.have.property('trace');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "RN-02 · pedido con el bagel (agotado en el script) → 422",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/pedidos",
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"clienteId\": \"{{clienteCarlos}}\",\n  \"lineas\": [\n    {\n      \"productoId\": \"{{productoBagelSalmon}}\",\n      \"cantidad\": 1\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 422', () => pm.response.to.have.status(422));",
+                  "pm.test('Error con formato ProblemDetail', () => {",
+                  "  const j = pm.response.json();",
+                  "  pm.expect(j).to.have.property('status');",
+                  "  pm.expect(j).to.have.property('detail');",
+                  "  pm.expect(j).to.not.have.property('trace');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "RN-02 · pedido con churros (categoría de temporada agotada) → 422",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/pedidos",
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"clienteId\": \"{{clienteCarlos}}\",\n  \"lineas\": [\n    {\n      \"productoId\": \"{{productoChurros}}\",\n      \"cantidad\": 1\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 422', () => pm.response.to.have.status(422));",
+                  "pm.test('Error con formato ProblemDetail', () => {",
+                  "  const j = pm.response.json();",
+                  "  pm.expect(j).to.have.property('status');",
+                  "  pm.expect(j).to.have.property('detail');",
+                  "  pm.expect(j).to.not.have.property('trace');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "RN-02 · un producto agotado invalida el pedido entero → 422",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/pedidos",
+            "description": "Café con leche disponible + horchata agotada: no se crea nada.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"clienteId\": \"{{clienteCarlos}}\",\n  \"lineas\": [\n    {\n      \"productoId\": \"{{productoCafeLeche}}\",\n      \"cantidad\": 1\n    },\n    {\n      \"productoId\": \"{{productoHorchata}}\",\n      \"cantidad\": 1\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 422', () => pm.response.to.have.status(422));",
+                  "pm.test('Error con formato ProblemDetail', () => {",
+                  "  const j = pm.response.json();",
+                  "  pm.expect(j).to.have.property('status');",
+                  "  pm.expect(j).to.have.property('detail');",
+                  "  pm.expect(j).to.not.have.property('trace');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "RN-06 · pedido con NAVIDAD2 (aún no ha empezado) → 422",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/pedidos",
+            "description": "NAVIDAD2 es válido del 01/12/2026 al 06/01/2027.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"clienteId\": \"{{clienteCarlos}}\",\n  \"lineas\": [\n    {\n      \"productoId\": \"{{productoDesayunoSaludable}}\",\n      \"cantidad\": 2\n    }\n  ],\n  \"codigoCupon\": \"NAVIDAD2\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 422', () => pm.response.to.have.status(422));",
+                  "pm.test('Error con formato ProblemDetail', () => {",
+                  "  const j = pm.response.json();",
+                  "  pm.expect(j).to.have.property('status');",
+                  "  pm.expect(j).to.have.property('detail');",
+                  "  pm.expect(j).to.not.have.property('trace');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "RN-04 · cantidad 0 → 422",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/pedidos",
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"clienteId\": \"{{clienteCarlos}}\",\n  \"lineas\": [\n    {\n      \"productoId\": \"{{productoEspresso}}\",\n      \"cantidad\": 0\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 422', () => pm.response.to.have.status(422));",
+                  "pm.test('Error con formato ProblemDetail', () => {",
+                  "  const j = pm.response.json();",
+                  "  pm.expect(j).to.have.property('status');",
+                  "  pm.expect(j).to.have.property('detail');",
+                  "  pm.expect(j).to.not.have.property('trace');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "RN-04 · cantidad negativa → 422",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/pedidos",
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"clienteId\": \"{{clienteCarlos}}\",\n  \"lineas\": [\n    {\n      \"productoId\": \"{{productoEspresso}}\",\n      \"cantidad\": -3\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 422', () => pm.response.to.have.status(422));",
+                  "pm.test('Error con formato ProblemDetail', () => {",
+                  "  const j = pm.response.json();",
+                  "  pm.expect(j).to.have.property('status');",
+                  "  pm.expect(j).to.have.property('detail');",
+                  "  pm.expect(j).to.not.have.property('trace');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "RN-04 · cantidad 21 → 422",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/pedidos",
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"clienteId\": \"{{clienteCarlos}}\",\n  \"lineas\": [\n    {\n      \"productoId\": \"{{productoEspresso}}\",\n      \"cantidad\": 21\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 422', () => pm.response.to.have.status(422));",
+                  "pm.test('Error con formato ProblemDetail', () => {",
+                  "  const j = pm.response.json();",
+                  "  pm.expect(j).to.have.property('status');",
+                  "  pm.expect(j).to.have.property('detail');",
+                  "  pm.expect(j).to.not.have.property('trace');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "RN-04 · 15 + 10 del mismo producto (suma 25) → 422",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/pedidos",
+            "description": "Al agrupar, la línea queda con 25 unidades y supera el máximo de 20.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"clienteId\": \"{{clienteCarlos}}\",\n  \"lineas\": [\n    {\n      \"productoId\": \"{{productoEspresso}}\",\n      \"cantidad\": 15\n    },\n    {\n      \"productoId\": \"{{productoEspresso}}\",\n      \"cantidad\": 10\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 422', () => pm.response.to.have.status(422));",
+                  "pm.test('Error con formato ProblemDetail', () => {",
+                  "  const j = pm.response.json();",
+                  "  pm.expect(j).to.have.property('status');",
+                  "  pm.expect(j).to.have.property('detail');",
+                  "  pm.expect(j).to.not.have.property('trace');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "RN-04 · más de 15 productos distintos → 422",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/pedidos",
+            "description": "Un pedido admite como máximo 15 líneas distintas.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"clienteId\": \"{{clienteCarlos}}\",\n  \"lineas\": [\n    {\n      \"productoId\": \"00000000-0000-0000-0000-000000000001\",\n      \"cantidad\": 1\n    },\n    {\n      \"productoId\": \"00000000-0000-0000-0000-000000000002\",\n      \"cantidad\": 1\n    },\n    {\n      \"productoId\": \"00000000-0000-0000-0000-000000000003\",\n      \"cantidad\": 1\n    },\n    {\n      \"productoId\": \"00000000-0000-0000-0000-000000000004\",\n      \"cantidad\": 1\n    },\n    {\n      \"productoId\": \"00000000-0000-0000-0000-000000000005\",\n      \"cantidad\": 1\n    },\n    {\n      \"productoId\": \"00000000-0000-0000-0000-000000000006\",\n      \"cantidad\": 1\n    },\n    {\n      \"productoId\": \"00000000-0000-0000-0000-000000000007\",\n      \"cantidad\": 1\n    },\n    {\n      \"productoId\": \"00000000-0000-0000-0000-000000000008\",\n      \"cantidad\": 1\n    },\n    {\n      \"productoId\": \"00000000-0000-0000-0000-000000000009\",\n      \"cantidad\": 1\n    },\n    {\n      \"productoId\": \"00000000-0000-0000-0000-00000000000a\",\n      \"cantidad\": 1\n    },\n    {\n      \"productoId\": \"00000000-0000-0000-0000-00000000000b\",\n      \"cantidad\": 1\n    },\n    {\n      \"productoId\": \"00000000-0000-0000-0000-00000000000c\",\n      \"cantidad\": 1\n    },\n    {\n      \"productoId\": \"00000000-0000-0000-0000-00000000000d\",\n      \"cantidad\": 1\n    },\n    {\n      \"productoId\": \"00000000-0000-0000-0000-00000000000e\",\n      \"cantidad\": 1\n    },\n    {\n      \"productoId\": \"00000000-0000-0000-0000-00000000000f\",\n      \"cantidad\": 1\n    },\n    {\n      \"productoId\": \"00000000-0000-0000-0000-000000000010\",\n      \"cantidad\": 1\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 422', () => pm.response.to.have.status(422));",
+                  "pm.test('Error con formato ProblemDetail', () => {",
+                  "  const j = pm.response.json();",
+                  "  pm.expect(j).to.have.property('status');",
+                  "  pm.expect(j).to.have.property('detail');",
+                  "  pm.expect(j).to.not.have.property('trace');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "RN-04 · exactamente 20 unidades → 201",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/pedidos",
+            "description": "Límite superior permitido.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"clienteId\": \"{{clienteCarlos}}\",\n  \"lineas\": [\n    {\n      \"productoId\": \"{{productoEspresso}}\",\n      \"cantidad\": 20\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 201', () => pm.response.to.have.status(201));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "RN-06 · pedido con cupón caducado → 422",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/pedidos",
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"clienteId\": \"{{clienteCarlos}}\",\n  \"lineas\": [\n    {\n      \"productoId\": \"{{productoTostadaAguacate}}\",\n      \"cantidad\": 3\n    }\n  ],\n  \"codigoCupon\": \"DULCE20\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 422', () => pm.response.to.have.status(422));",
+                  "pm.test('Error con formato ProblemDetail', () => {",
+                  "  const j = pm.response.json();",
+                  "  pm.expect(j).to.have.property('status');",
+                  "  pm.expect(j).to.have.property('detail');",
+                  "  pm.expect(j).to.not.have.property('trace');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "RN-06 · pedido sin llegar al mínimo del cupón → 422",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/pedidos",
+            "description": "CAFEMATIN exige más de 5 € y el pedido suma 1.50.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"clienteId\": \"{{clienteCarlos}}\",\n  \"lineas\": [\n    {\n      \"productoId\": \"{{productoEspresso}}\",\n      \"cantidad\": 1\n    }\n  ],\n  \"codigoCupon\": \"CAFEMATIN\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 422', () => pm.response.to.have.status(422));",
+                  "pm.test('Error con formato ProblemDetail', () => {",
+                  "  const j = pm.response.json();",
+                  "  pm.expect(j).to.have.property('status');",
+                  "  pm.expect(j).to.have.property('detail');",
+                  "  pm.expect(j).to.not.have.property('trace');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "RN-06 · cupón personal de otro cliente → 422",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/pedidos",
+            "description": "SOLOMARIA es de María y el pedido es de Carlos.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"clienteId\": \"{{clienteCarlos}}\",\n  \"lineas\": [\n    {\n      \"productoId\": \"{{productoEspresso}}\",\n      \"cantidad\": 2\n    }\n  ],\n  \"codigoCupon\": \"SOLOMARIA\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 422', () => pm.response.to.have.status(422));",
+                  "pm.test('Error con formato ProblemDetail', () => {",
+                  "  const j = pm.response.json();",
+                  "  pm.expect(j).to.have.property('status');",
+                  "  pm.expect(j).to.have.property('detail');",
+                  "  pm.expect(j).to.not.have.property('trace');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "RN-06 · cupón inexistente → 404",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/pedidos",
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"clienteId\": \"{{clienteCarlos}}\",\n  \"lineas\": [\n    {\n      \"productoId\": \"{{productoEspresso}}\",\n      \"cantidad\": 2\n    }\n  ],\n  \"codigoCupon\": \"NOEXISTE\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 404', () => pm.response.to.have.status(404));",
+                  "pm.test('Error con formato ProblemDetail', () => {",
+                  "  const j = pm.response.json();",
+                  "  pm.expect(j).to.have.property('status');",
+                  "  pm.expect(j).to.have.property('detail');",
+                  "  pm.expect(j).to.not.have.property('trace');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST cliente inexistente → 404",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/pedidos",
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"clienteId\": \"{{idInexistente}}\",\n  \"lineas\": [\n    {\n      \"productoId\": \"{{productoEspresso}}\",\n      \"cantidad\": 1\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 404', () => pm.response.to.have.status(404));",
+                  "pm.test('Error con formato ProblemDetail', () => {",
+                  "  const j = pm.response.json();",
+                  "  pm.expect(j).to.have.property('status');",
+                  "  pm.expect(j).to.have.property('detail');",
+                  "  pm.expect(j).to.not.have.property('trace');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST producto inexistente → 404",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/pedidos",
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"clienteId\": \"{{clienteCarlos}}\",\n  \"lineas\": [\n    {\n      \"productoId\": \"{{idInexistente}}\",\n      \"cantidad\": 1\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 404', () => pm.response.to.have.status(404));",
+                  "pm.test('Error con formato ProblemDetail', () => {",
+                  "  const j = pm.response.json();",
+                  "  pm.expect(j).to.have.property('status');",
+                  "  pm.expect(j).to.have.property('detail');",
+                  "  pm.expect(j).to.not.have.property('trace');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST sin clienteId → 400",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/pedidos",
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"lineas\": [\n    {\n      \"productoId\": \"{{productoEspresso}}\",\n      \"cantidad\": 1\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 400', () => pm.response.to.have.status(400));",
+                  "pm.test('Error con formato ProblemDetail', () => {",
+                  "  const j = pm.response.json();",
+                  "  pm.expect(j).to.have.property('status');",
+                  "  pm.expect(j).to.have.property('detail');",
+                  "  pm.expect(j).to.not.have.property('trace');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST sin líneas → 400",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/pedidos",
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"clienteId\": \"{{clienteCarlos}}\",\n  \"lineas\": []\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 400', () => pm.response.to.have.status(400));",
+                  "pm.test('Error con formato ProblemDetail', () => {",
+                  "  const j = pm.response.json();",
+                  "  pm.expect(j).to.have.property('status');",
+                  "  pm.expect(j).to.have.property('detail');",
+                  "  pm.expect(j).to.not.have.property('trace');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST línea sin productoId → 400",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/pedidos",
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"clienteId\": \"{{clienteCarlos}}\",\n  \"lineas\": [\n    {\n      \"cantidad\": 1\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 400', () => pm.response.to.have.status(400));",
+                  "pm.test('Error con formato ProblemDetail', () => {",
+                  "  const j = pm.response.json();",
+                  "  pm.expect(j).to.have.property('status');",
+                  "  pm.expect(j).to.have.property('detail');",
+                  "  pm.expect(j).to.not.have.property('trace');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST línea sin cantidad → 400",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/pedidos",
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"clienteId\": \"{{clienteCarlos}}\",\n  \"lineas\": [\n    {\n      \"productoId\": \"{{productoEspresso}}\"\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 400', () => pm.response.to.have.status(400));",
+                  "pm.test('Error con formato ProblemDetail', () => {",
+                  "  const j = pm.response.json();",
+                  "  pm.expect(j).to.have.property('status');",
+                  "  pm.expect(j).to.have.property('detail');",
+                  "  pm.expect(j).to.not.have.property('trace');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST body vacío → 400",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": "{{baseUrl}}/pedidos",
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 400', () => pm.response.to.have.status(400));",
+                  "pm.test('Error con formato ProblemDetail', () => {",
+                  "  const j = pm.response.json();",
+                  "  pm.expect(j).to.have.property('status');",
+                  "  pm.expect(j).to.have.property('detail');",
+                  "  pm.expect(j).to.not.have.property('trace');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET detalle del pedido creado",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/pedidos/{{pedidoId}}",
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Trae líneas e importes', () => {",
+                  "  const j = pm.response.json();",
+                  "  pm.expect(j.lineas).to.have.lengthOf(2);",
+                  "  pm.expect(j).to.have.property('total');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET detalle pedido del script",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/pedidos/{{pedidoEntregado}}",
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Pedido 1 del 04/10: ENTREGADO, total 3.65', () => {",
+                  "  const j = pm.response.json();",
+                  "  pm.expect(j.estado).to.eql('ENTREGADO');",
+                  "  pm.expect(Number(j.total)).to.eql(3.65);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET detalle inexistente → 404",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/pedidos/{{idInexistente}}",
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 404', () => pm.response.to.have.status(404));",
+                  "pm.test('Error con formato ProblemDetail', () => {",
+                  "  const j = pm.response.json();",
+                  "  pm.expect(j).to.have.property('status');",
+                  "  pm.expect(j).to.have.property('detail');",
+                  "  pm.expect(j).to.not.have.property('trace');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET detalle id mal formado → 400",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/pedidos/no-es-uuid",
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 400', () => pm.response.to.have.status(400));",
+                  "pm.test('Error con formato ProblemDetail', () => {",
+                  "  const j = pm.response.json();",
+                  "  pm.expect(j).to.have.property('status');",
+                  "  pm.expect(j).to.have.property('detail');",
+                  "  pm.expect(j).to.not.have.property('trace');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET listar todos",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/pedidos",
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Paginado', () => pm.expect(pm.response.json()).to.have.property('content'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET listar por estado ENTREGADO",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/pedidos?estado=ENTREGADO",
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Todos ENTREGADO', () => pm.response.json().content.forEach(p => pm.expect(p.estado).to.eql('ENTREGADO')));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET listar por cliente",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/pedidos?clienteId={{clienteCarlos}}",
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Todos de Carlos', () => pm.response.json().content.forEach(p => pm.expect(p.clienteId).to.eql(pm.variables.get('clienteCarlos'))));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET listar por rango de fechas (04/10/2026)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/pedidos?desde=2026-10-04&hasta=2026-10-04",
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Los 10 pedidos del script', () => pm.expect(pm.response.json().page.totalElements).to.eql(10));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET listar combinando filtros y paginación",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/pedidos?estado=ENTREGADO&desde=2026-10-01&hasta=2026-10-31&page=0&size=2",
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Máximo 2 por página', () => pm.expect(pm.response.json().content.length).to.be.at.most(2));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET listar hasta anterior a desde → 400",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/pedidos?desde=2026-10-10&hasta=2026-10-01",
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 400', () => pm.response.to.have.status(400));",
+                  "pm.test('Error con formato ProblemDetail', () => {",
+                  "  const j = pm.response.json();",
+                  "  pm.expect(j).to.have.property('status');",
+                  "  pm.expect(j).to.have.property('detail');",
+                  "  pm.expect(j).to.not.have.property('trace');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET listar estado inválido → 400",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/pedidos?estado=FOO",
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 400', () => pm.response.to.have.status(400));",
+                  "pm.test('Error con formato ProblemDetail', () => {",
+                  "  const j = pm.response.json();",
+                  "  pm.expect(j).to.have.property('status');",
+                  "  pm.expect(j).to.have.property('detail');",
+                  "  pm.expect(j).to.not.have.property('trace');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET listar fecha mal formada → 400",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/pedidos?desde=04-10-2026",
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 400', () => pm.response.to.have.status(400));",
+                  "pm.test('Error con formato ProblemDetail', () => {",
+                  "  const j = pm.response.json();",
+                  "  pm.expect(j).to.have.property('status');",
+                  "  pm.expect(j).to.have.property('detail');",
+                  "  pm.expect(j).to.not.have.property('trace');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "RN-08 · PENDIENTE → LISTO (salta un paso) → 422",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/pedidos/{{pedidoId}}/estado",
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"estado\": \"LISTO\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 422', () => pm.response.to.have.status(422));",
+                  "pm.test('Error con formato ProblemDetail', () => {",
+                  "  const j = pm.response.json();",
+                  "  pm.expect(j).to.have.property('status');",
+                  "  pm.expect(j).to.have.property('detail');",
+                  "  pm.expect(j).to.not.have.property('trace');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "RN-08 · PENDIENTE → ENTREGADO → 422",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/pedidos/{{pedidoId}}/estado",
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"estado\": \"ENTREGADO\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 422', () => pm.response.to.have.status(422));",
+                  "pm.test('Error con formato ProblemDetail', () => {",
+                  "  const j = pm.response.json();",
+                  "  pm.expect(j).to.have.property('status');",
+                  "  pm.expect(j).to.have.property('detail');",
+                  "  pm.expect(j).to.not.have.property('trace');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "RN-08 · PENDIENTE → EN_PREPARACION → 200",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/pedidos/{{pedidoId}}/estado",
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"estado\": \"EN_PREPARACION\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('EN_PREPARACION', () => pm.expect(pm.response.json().estado).to.eql('EN_PREPARACION'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "RN-08 · EN_PREPARACION → EN_PREPARACION → 422",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/pedidos/{{pedidoId}}/estado",
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"estado\": \"EN_PREPARACION\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 422', () => pm.response.to.have.status(422));",
+                  "pm.test('Error con formato ProblemDetail', () => {",
+                  "  const j = pm.response.json();",
+                  "  pm.expect(j).to.have.property('status');",
+                  "  pm.expect(j).to.have.property('detail');",
+                  "  pm.expect(j).to.not.have.property('trace');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "RN-08 · EN_PREPARACION → CANCELADO → 422",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/pedidos/{{pedidoId}}/estado",
+            "description": "Solo se puede cancelar un pedido PENDIENTE.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"estado\": \"CANCELADO\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 422', () => pm.response.to.have.status(422));",
+                  "pm.test('Error con formato ProblemDetail', () => {",
+                  "  const j = pm.response.json();",
+                  "  pm.expect(j).to.have.property('status');",
+                  "  pm.expect(j).to.have.property('detail');",
+                  "  pm.expect(j).to.not.have.property('trace');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "RN-08 · EN_PREPARACION → LISTO → 200",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/pedidos/{{pedidoId}}/estado",
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"estado\": \"LISTO\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('LISTO', () => pm.expect(pm.response.json().estado).to.eql('LISTO'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "RN-08 · LISTO → PENDIENTE (hacia atrás) → 422",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/pedidos/{{pedidoId}}/estado",
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"estado\": \"PENDIENTE\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 422', () => pm.response.to.have.status(422));",
+                  "pm.test('Error con formato ProblemDetail', () => {",
+                  "  const j = pm.response.json();",
+                  "  pm.expect(j).to.have.property('status');",
+                  "  pm.expect(j).to.have.property('detail');",
+                  "  pm.expect(j).to.not.have.property('trace');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "RN-08 · LISTO → ENTREGADO → 200",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/pedidos/{{pedidoId}}/estado",
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"estado\": \"ENTREGADO\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('ENTREGADO', () => pm.expect(pm.response.json().estado).to.eql('ENTREGADO'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "RN-08 · ENTREGADO → CANCELADO → 422",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/pedidos/{{pedidoId}}/estado",
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"estado\": \"CANCELADO\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 422', () => pm.response.to.have.status(422));",
+                  "pm.test('Error con formato ProblemDetail', () => {",
+                  "  const j = pm.response.json();",
+                  "  pm.expect(j).to.have.property('status');",
+                  "  pm.expect(j).to.have.property('detail');",
+                  "  pm.expect(j).to.not.have.property('trace');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "RN-08 · PENDIENTE → CANCELADO → 200",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/pedidos/{{pedidoCancelarId}}/estado",
+            "description": "Al cancelar se libera el uso del cupón CUMPLECAFEE.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"estado\": \"CANCELADO\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('CANCELADO', () => pm.expect(pm.response.json().estado).to.eql('CANCELADO'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "RN-08 · CANCELADO → EN_PREPARACION → 422",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/pedidos/{{pedidoCancelarId}}/estado",
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"estado\": \"EN_PREPARACION\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 422', () => pm.response.to.have.status(422));",
+                  "pm.test('Error con formato ProblemDetail', () => {",
+                  "  const j = pm.response.json();",
+                  "  pm.expect(j).to.have.property('status');",
+                  "  pm.expect(j).to.have.property('detail');",
+                  "  pm.expect(j).to.not.have.property('trace');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "PATCH estado inválido → 400",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/pedidos/{{pedidoId}}/estado",
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"estado\": \"FOO\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 400', () => pm.response.to.have.status(400));",
+                  "pm.test('Error con formato ProblemDetail', () => {",
+                  "  const j = pm.response.json();",
+                  "  pm.expect(j).to.have.property('status');",
+                  "  pm.expect(j).to.have.property('detail');",
+                  "  pm.expect(j).to.not.have.property('trace');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "PATCH sin estado → 400",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/pedidos/{{pedidoId}}/estado",
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 400', () => pm.response.to.have.status(400));",
+                  "pm.test('Error con formato ProblemDetail', () => {",
+                  "  const j = pm.response.json();",
+                  "  pm.expect(j).to.have.property('status');",
+                  "  pm.expect(j).to.have.property('detail');",
+                  "  pm.expect(j).to.not.have.property('trace');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "PATCH pedido inexistente → 404",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/pedidos/{{idInexistente}}/estado",
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"estado\": \"EN_PREPARACION\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 404', () => pm.response.to.have.status(404));",
+                  "pm.test('Error con formato ProblemDetail', () => {",
+                  "  const j = pm.response.json();",
+                  "  pm.expect(j).to.have.property('status');",
+                  "  pm.expect(j).to.have.property('detail');",
+                  "  pm.expect(j).to.not.have.property('trace');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "5. Informes",
+      "description": "Endpoints 15 y 16. RF-07 / RN-10: solo cuentan los pedidos ENTREGADO.",
+      "item": [
+        {
+          "name": "RN-10 · ventas del 04/10/2026",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/informes/ventas-dia?fecha=2026-10-04",
+            "description": "Del script: 6 pedidos ENTREGADO que suman 42.68 € (no cuentan el cancelado, el pendiente, el listo ni el que está en preparación)."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('6 pedidos y 42.68 €', () => {",
+                  "  const j = pm.response.json();",
+                  "  pm.expect(j.numeroPedidos).to.eql(6);",
+                  "  pm.expect(Number(j.total)).to.eql(42.68);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "ventas de un día sin pedidos",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/informes/ventas-dia?fecha=2020-01-01",
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('0 pedidos', () => pm.expect(pm.response.json().numeroPedidos).to.eql(0));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "ventas sin fecha → 400",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/informes/ventas-dia",
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 400', () => pm.response.to.have.status(400));",
+                  "pm.test('Error con formato ProblemDetail', () => {",
+                  "  const j = pm.response.json();",
+                  "  pm.expect(j).to.have.property('status');",
+                  "  pm.expect(j).to.have.property('detail');",
+                  "  pm.expect(j).to.not.have.property('trace');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "ventas fecha mal formada → 400",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/informes/ventas-dia?fecha=04/10/2026",
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 400', () => pm.response.to.have.status(400));",
+                  "pm.test('Error con formato ProblemDetail', () => {",
+                  "  const j = pm.response.json();",
+                  "  pm.expect(j).to.have.property('status');",
+                  "  pm.expect(j).to.have.property('detail');",
+                  "  pm.expect(j).to.not.have.property('trace');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "RN-10 · productos más vendidos en octubre",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/informes/productos-top?desde=2026-10-01&hasta=2026-10-31&limite=5",
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "const j = pm.response.json();",
+                  "pm.test('Máximo 5', () => pm.expect(j.length).to.be.at.most(5));",
+                  "pm.test('Ordenado de más a menos unidades', () => {",
+                  "  for (let i = 1; i < j.length; i++) pm.expect(j[i-1].unidadesVendidas).to.be.at.least(j[i].unidadesVendidas);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "productos-top sin límite (por defecto 10)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/informes/productos-top?desde=2026-10-01&hasta=2026-10-31",
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Máximo 10', () => pm.expect(pm.response.json().length).to.be.at.most(10));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "productos-top límite 0 → 400",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/informes/productos-top?desde=2026-10-01&hasta=2026-10-31&limite=0",
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 400', () => pm.response.to.have.status(400));",
+                  "pm.test('Error con formato ProblemDetail', () => {",
+                  "  const j = pm.response.json();",
+                  "  pm.expect(j).to.have.property('status');",
+                  "  pm.expect(j).to.have.property('detail');",
+                  "  pm.expect(j).to.not.have.property('trace');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "productos-top límite 101 → 400",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/informes/productos-top?desde=2026-10-01&hasta=2026-10-31&limite=101",
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 400', () => pm.response.to.have.status(400));",
+                  "pm.test('Error con formato ProblemDetail', () => {",
+                  "  const j = pm.response.json();",
+                  "  pm.expect(j).to.have.property('status');",
+                  "  pm.expect(j).to.have.property('detail');",
+                  "  pm.expect(j).to.not.have.property('trace');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "productos-top hasta anterior a desde → 400",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/informes/productos-top?desde=2026-10-31&hasta=2026-10-01",
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 400', () => pm.response.to.have.status(400));",
+                  "pm.test('Error con formato ProblemDetail', () => {",
+                  "  const j = pm.response.json();",
+                  "  pm.expect(j).to.have.property('status');",
+                  "  pm.expect(j).to.have.property('detail');",
+                  "  pm.expect(j).to.not.have.property('trace');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "productos-top sin desde → 400",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/informes/productos-top?hasta=2026-10-31",
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 400', () => pm.response.to.have.status(400));",
+                  "pm.test('Error con formato ProblemDetail', () => {",
+                  "  const j = pm.response.json();",
+                  "  pm.expect(j).to.have.property('status');",
+                  "  pm.expect(j).to.have.property('detail');",
+                  "  pm.expect(j).to.not.have.property('trace');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8081/api/v1"
+    },
+    {
+      "key": "clienteCarlos",
+      "value": "b0eebc99-9c0b-4ef8-bb6d-6bb9bd380a01"
+    },
+    {
+      "key": "clienteMaria",
+      "value": "b0eebc99-9c0b-4ef8-bb6d-6bb9bd380a02"
+    },
+    {
+      "key": "clienteIrene",
+      "value": "b0eebc99-9c0b-4ef8-bb6d-6bb9bd380a14"
+    },
+    {
+      "key": "categoriaClasicos",
+      "value": "e0eebc99-9c0b-4ef8-bb6d-6bb9bd380a01"
+    },
+    {
+      "key": "categoriaTes",
+      "value": "e0eebc99-9c0b-4ef8-bb6d-6bb9bd380a03"
+    },
+    {
+      "key": "categoriaZumos",
+      "value": "e0eebc99-9c0b-4ef8-bb6d-6bb9bd380a07"
+    },
+    {
+      "key": "categoriaTemporada",
+      "value": "e0eebc99-9c0b-4ef8-bb6d-6bb9bd380a10"
+    },
+    {
+      "key": "productoEspresso",
+      "value": "f0eebc99-9c0b-4ef8-bb6d-6bb9bd380a01",
+      "description": "Café Espresso · 1.50"
+    },
+    {
+      "key": "productoCafeLeche",
+      "value": "f0eebc99-9c0b-4ef8-bb6d-6bb9bd380a02",
+      "description": "Café con Leche · 1.80"
+    },
+    {
+      "key": "productoIcedMacchiato",
+      "value": "f0eebc99-9c0b-4ef8-bb6d-6bb9bd380a03",
+      "description": "Iced Caramel Macchiato · 3.80"
+    },
+    {
+      "key": "productoCappuccino",
+      "value": "f0eebc99-9c0b-4ef8-bb6d-6bb9bd380a04",
+      "description": "Cappuccino Italiano · 2.80"
+    },
+    {
+      "key": "productoTostadaTomate",
+      "value": "f0eebc99-9c0b-4ef8-bb6d-6bb9bd380a05",
+      "description": "Tostada con Tomate y Aceite · 2.50"
+    },
+    {
+      "key": "productoTostadaAguacate",
+      "value": "f0eebc99-9c0b-4ef8-bb6d-6bb9bd380a06",
+      "description": "Tostada de Aguacate y Huevo · 4.90"
+    },
+    {
+      "key": "productoCroissant",
+      "value": "f0eebc99-9c0b-4ef8-bb6d-6bb9bd380a07",
+      "description": "Croissant de Mantequilla · 1.90"
+    },
+    {
+      "key": "productoCarrotCake",
+      "value": "f0eebc99-9c0b-4ef8-bb6d-6bb9bd380a08",
+      "description": "Tarta de Zanahoria · 4.20"
+    },
+    {
+      "key": "productoZumo",
+      "value": "f0eebc99-9c0b-4ef8-bb6d-6bb9bd380a09",
+      "description": "Zumo de Naranja Natural · 2.80"
+    },
+    {
+      "key": "productoSmoothie",
+      "value": "f0eebc99-9c0b-4ef8-bb6d-6bb9bd380a10",
+      "description": "Smoothie Antiox · 3.90"
+    },
+    {
+      "key": "productoMatcha",
+      "value": "f0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11",
+      "description": "Té Verde Matcha · 2.20"
+    },
+    {
+      "key": "productoRooibos",
+      "value": "f0eebc99-9c0b-4ef8-bb6d-6bb9bd380a12",
+      "description": "Rooibos con Canela · 1.90"
+    },
+    {
+      "key": "productoChaiLatte",
+      "value": "f0eebc99-9c0b-4ef8-bb6d-6bb9bd380a13",
+      "description": "Chai Latte · 3.20"
+    },
+    {
+      "key": "productoNapolitana",
+      "value": "f0eebc99-9c0b-4ef8-bb6d-6bb9bd380a14",
+      "description": "Napolitana de Chocolate · 2.10"
+    },
+    {
+      "key": "productoMuffin",
+      "value": "f0eebc99-9c0b-4ef8-bb6d-6bb9bd380a15",
+      "description": "Muffin de Arándanos · 2.40"
+    },
+    {
+      "key": "productoCheesecake",
+      "value": "f0eebc99-9c0b-4ef8-bb6d-6bb9bd380a16",
+      "description": "Cheesecake de Frutos Rojos · 4.50"
+    },
+    {
+      "key": "productoBrownie",
+      "value": "f0eebc99-9c0b-4ef8-bb6d-6bb9bd380a17",
+      "description": "Brownie de Chocolate y Nueces · 3.50"
+    },
+    {
+      "key": "productoDesayunoCompleto",
+      "value": "f0eebc99-9c0b-4ef8-bb6d-6bb9bd380a18",
+      "description": "Desayuno Completo · 5.90"
+    },
+    {
+      "key": "productoComboDulce",
+      "value": "f0eebc99-9c0b-4ef8-bb6d-6bb9bd380a19",
+      "description": "Combo Dulce · 3.20"
+    },
+    {
+      "key": "productoSuplementoAvena",
+      "value": "f0eebc99-9c0b-4ef8-bb6d-6bb9bd380a20",
+      "description": "Suplemento Bebida de Avena · 0.40"
+    },
+    {
+      "key": "productoSuplementoSoja",
+      "value": "f0eebc99-9c0b-4ef8-bb6d-6bb9bd380a21",
+      "description": "Suplemento Bebida de Soja · 0.40"
+    },
+    {
+      "key": "productoPumpkinLatte",
+      "value": "f0eebc99-9c0b-4ef8-bb6d-6bb9bd380a22",
+      "description": "Pumpkin Spice Latte · 3.90 · AGOTADO (categoría de temporada)"
+    },
+    {
+      "key": "productoCortado",
+      "value": "f0eebc99-9c0b-4ef8-bb6d-6bb9bd380a23",
+      "description": "Café Cortado · 1.60"
+    },
+    {
+      "key": "productoAmericano",
+      "value": "f0eebc99-9c0b-4ef8-bb6d-6bb9bd380a24",
+      "description": "Café Americano · 1.70"
+    },
+    {
+      "key": "productoBombon",
+      "value": "f0eebc99-9c0b-4ef8-bb6d-6bb9bd380a25",
+      "description": "Café Bombón · 1.90"
+    },
+    {
+      "key": "productoFlatWhite",
+      "value": "f0eebc99-9c0b-4ef8-bb6d-6bb9bd380a26",
+      "description": "Flat White · 3.00"
+    },
+    {
+      "key": "productoMochaBlanco",
+      "value": "f0eebc99-9c0b-4ef8-bb6d-6bb9bd380a27",
+      "description": "Mocha Blanco · 3.50"
+    },
+    {
+      "key": "productoColdBrew",
+      "value": "f0eebc99-9c0b-4ef8-bb6d-6bb9bd380a28",
+      "description": "Cold Brew · 3.20"
+    },
+    {
+      "key": "productoEarlGrey",
+      "value": "f0eebc99-9c0b-4ef8-bb6d-6bb9bd380a29",
+      "description": "Té Earl Grey · 1.80"
+    },
+    {
+      "key": "productoPoleoMenta",
+      "value": "f0eebc99-9c0b-4ef8-bb6d-6bb9bd380a30",
+      "description": "Poleo Menta · 1.60"
+    },
+    {
+      "key": "productoTeRojo",
+      "value": "f0eebc99-9c0b-4ef8-bb6d-6bb9bd380a31",
+      "description": "Té Rojo Pu-erh · 1.90 · DADO DE BAJA (RN-01)"
+    },
+    {
+      "key": "productoTostadaJamon",
+      "value": "f0eebc99-9c0b-4ef8-bb6d-6bb9bd380a32",
+      "description": "Tostada de Jamón Ibérico · 4.20"
+    },
+    {
+      "key": "productoSandwichMixto",
+      "value": "f0eebc99-9c0b-4ef8-bb6d-6bb9bd380a33",
+      "description": "Sándwich Mixto · 3.50"
+    },
+    {
+      "key": "productoBagelSalmon",
+      "value": "f0eebc99-9c0b-4ef8-bb6d-6bb9bd380a34",
+      "description": "Bagel de Salmón · 5.50 · AGOTADO (RN-02)"
+    },
+    {
+      "key": "productoEnsaimada",
+      "value": "f0eebc99-9c0b-4ef8-bb6d-6bb9bd380a35",
+      "description": "Ensaimada · 2.20"
+    },
+    {
+      "key": "productoPalmera",
+      "value": "f0eebc99-9c0b-4ef8-bb6d-6bb9bd380a36",
+      "description": "Palmera de Chocolate · 2.30"
+    },
+    {
+      "key": "productoCroissantIntegral",
+      "value": "f0eebc99-9c0b-4ef8-bb6d-6bb9bd380a37",
+      "description": "Croissant Integral con Mermelada · 2.20"
+    },
+    {
+      "key": "productoTartaSantiago",
+      "value": "f0eebc99-9c0b-4ef8-bb6d-6bb9bd380a38",
+      "description": "Tarta de Santiago · 3.90"
+    },
+    {
+      "key": "productoTartaChocolate",
+      "value": "f0eebc99-9c0b-4ef8-bb6d-6bb9bd380a39",
+      "description": "Tarta de Chocolate · 4.20"
+    },
+    {
+      "key": "productoTartaManzana",
+      "value": "f0eebc99-9c0b-4ef8-bb6d-6bb9bd380a40",
+      "description": "Tarta de Manzana · 3.80"
+    },
+    {
+      "key": "productoZumoVerde",
+      "value": "f0eebc99-9c0b-4ef8-bb6d-6bb9bd380a41",
+      "description": "Zumo Verde Detox · 3.50"
+    },
+    {
+      "key": "productoBatidoPlatano",
+      "value": "f0eebc99-9c0b-4ef8-bb6d-6bb9bd380a42",
+      "description": "Batido de Plátano y Avena · 3.60"
+    },
+    {
+      "key": "productoLimonada",
+      "value": "f0eebc99-9c0b-4ef8-bb6d-6bb9bd380a43",
+      "description": "Limonada Casera · 2.50"
+    },
+    {
+      "key": "productoDesayunoSaludable",
+      "value": "f0eebc99-9c0b-4ef8-bb6d-6bb9bd380a44",
+      "description": "Desayuno Saludable · 7.90"
+    },
+    {
+      "key": "productoComboMerienda",
+      "value": "f0eebc99-9c0b-4ef8-bb6d-6bb9bd380a45",
+      "description": "Combo Merienda · 5.50"
+    },
+    {
+      "key": "productoComboSalado",
+      "value": "f0eebc99-9c0b-4ef8-bb6d-6bb9bd380a46",
+      "description": "Combo Salado · 4.90"
+    },
+    {
+      "key": "productoSuplementoAlmendra",
+      "value": "f0eebc99-9c0b-4ef8-bb6d-6bb9bd380a47",
+      "description": "Suplemento Bebida de Almendra · 0.40"
+    },
+    {
+      "key": "productoShotEspresso",
+      "value": "f0eebc99-9c0b-4ef8-bb6d-6bb9bd380a48",
+      "description": "Suplemento Shot de Espresso · 0.60"
+    },
+    {
+      "key": "productoNataMontada",
+      "value": "f0eebc99-9c0b-4ef8-bb6d-6bb9bd380a49",
+      "description": "Suplemento Nata Montada · 0.50"
+    },
+    {
+      "key": "productoChurros",
+      "value": "f0eebc99-9c0b-4ef8-bb6d-6bb9bd380a50",
+      "description": "Chocolate con Churros · 4.50 · AGOTADO (categoría de temporada)"
+    },
+    {
+      "key": "productoRoscon",
+      "value": "f0eebc99-9c0b-4ef8-bb6d-6bb9bd380a51",
+      "description": "Porción de Roscón de Reyes · 3.50 · AGOTADO (categoría de temporada)"
+    },
+    {
+      "key": "productoHorchata",
+      "value": "f0eebc99-9c0b-4ef8-bb6d-6bb9bd380a52",
+      "description": "Horchata Valenciana · 2.80 · AGOTADO (categoría de temporada)"
+    },
+    {
+      "key": "alergenoGluten",
+      "value": "a1eebc99-9c0b-4ef8-bb6d-6bb9bd380a01"
+    },
+    {
+      "key": "alergenoLacteos",
+      "value": "a1eebc99-9c0b-4ef8-bb6d-6bb9bd380a02"
+    },
+    {
+      "key": "alergenoFrutosCascara",
+      "value": "a1eebc99-9c0b-4ef8-bb6d-6bb9bd380a04"
+    },
+    {
+      "key": "alergenoPescado",
+      "value": "a1eebc99-9c0b-4ef8-bb6d-6bb9bd380a11"
+    },
+    {
+      "key": "pedidoEntregado",
+      "value": "b1eebc99-9c0b-4ef8-bb6d-6bb9bd380a01"
+    },
+    {
+      "key": "idInexistente",
+      "value": "00000000-0000-0000-0000-000000000000"
+    },
+    {
+      "key": "productoId",
+      "value": ""
+    },
+    {
+      "key": "pedidoId",
+      "value": ""
+    },
+    {
+      "key": "pedidoCancelarId",
+      "value": ""
+    },
+    {
+      "key": "cuponCodigo",
+      "value": ""
+    },
+    {
+      "key": "cuponFijoCodigo",
+      "value": ""
+    }
+  ]
+}
