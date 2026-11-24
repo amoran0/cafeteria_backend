@@ -1,5 +1,6 @@
 package es.safareyes.cafeteria.controladores;
 
+import es.safareyes.cafeteria.excepciones.CredencialesIncorrectas;
 import es.safareyes.cafeteria.excepciones.ElementoDuplicado;
 import es.safareyes.cafeteria.excepciones.ElementoNoEncontrado;
 import es.safareyes.cafeteria.excepciones.ReglaNegocioException;
@@ -49,6 +50,12 @@ public class ErrorGlobalController {
     @ExceptionHandler(ElementoDuplicado.class)
     public ProblemDetail elementoDuplicado(ElementoDuplicado e) {
         return construir(HttpStatus.CONFLICT, "Elemento duplicado", e.getMessage());
+    }
+
+    /** Login fallido */
+    @ExceptionHandler(CredencialesIncorrectas.class)
+    public ProblemDetail credencialesIncorrectas(CredencialesIncorrectas e) {
+        return construir(HttpStatus.UNAUTHORIZED, "Credenciales incorrectas", e.getMessage());
     }
 
     /** Lo lanzan los servicios con mensajes propios (p. ej. límites de los informes) */

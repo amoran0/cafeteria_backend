@@ -1,10 +1,577 @@
 {
   "info": {
     "name": "Cafetería API",
-    "description": "16 endpoints de /api/v1 con casos de éxito y de error según RN-01 a RN-10.\n\nUsa los datos de db/cafeteria.sql: ejecuta el script antes para partir de un estado limpio.\nPensada para ejecutarse en orden con el Collection Runner: algunas peticiones guardan ids (productoId, pedidoId, cuponCodigo...) que usan las siguientes.\nTodavía sin seguridad: no lleva tokens.",
+    "description": "18 endpoints de /api/v1 con casos de éxito y de error según RN-01 a RN-10.\n\nUsa los datos de db/cafeteria.sql: ejecuta el script antes para partir de un estado limpio.\nPensada para ejecutarse en orden con el Collection Runner: algunas peticiones guardan ids (productoId, pedidoId, cuponCodigo...) que usan las siguientes.\nSeguridad con JWT: ejecuta primero la carpeta '0. Usuarios y seguridad'. El login de ADMIN guarda {{token}} y la colección lo envía en todas las peticiones (Authorization: Bearer {{token}}).\nUsuarios del script: gerencia@cafeteria.com / admin123 (ADMIN), marcos.barista@cafeteria.com / barista123 (BARISTA), clientes / cliente123.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "item": [
+    {
+      "name": "0. Usuarios y seguridad",
+      "description": "Registro y login (públicos) y pruebas de las reglas de acceso de SecurityConfig. Ejecutar primero: el login de ADMIN guarda {{token}}, que usan el resto de carpetas.",
+      "item": [
+        {
+          "name": "POST registro de un cliente nuevo → 200",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/usuarios/registro",
+            "auth": {
+              "type": "noauth"
+            },
+            "description": "Ruta pública. El email cambia en cada ejecución (pre-request) para poder repetir la colección sin volver a ejecutar el script.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{emailNuevo}}\",\n  \"password\": \"cliente123\",\n  \"confirmPassword\": \"cliente123\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.collectionVariables.set('emailNuevo', 'postman' + Date.now() + '@test.com');"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST registro con email ya existente → 422",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/usuarios/registro",
+            "auth": {
+              "type": "noauth"
+            },
+            "description": "El email se compara sin distinguir mayúsculas. Lanza ReglaNegocioException → 422.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"GERENCIA@cafeteria.com\",\n  \"password\": \"otra12345\",\n  \"confirmPassword\": \"otra12345\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 422', () => pm.response.to.have.status(422));",
+                  "pm.test('Mensaje', () => pm.expect(pm.response.json().detail).to.eql('Ya existe un usuario con ese email'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST registro con contraseñas distintas → 422",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/usuarios/registro",
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"distintas@test.com\",\n  \"password\": \"cliente123\",\n  \"confirmPassword\": \"cliente124\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 422', () => pm.response.to.have.status(422));",
+                  "pm.test('Error en formato ProblemDetail', () => pm.expect(pm.response.json()).to.have.property('detail'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST registro con datos no válidos → 400",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/usuarios/registro",
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"no-es-un-email\",\n  \"password\": \"\",\n  \"confirmPassword\": \"\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 400', () => pm.response.to.have.status(400));",
+                  "const e = pm.response.json().errores;",
+                  "pm.test('Indica cada campo erróneo', () => pm.expect(e).to.have.all.keys('email', 'password', 'confirmPassword'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST login con contraseña incorrecta → 401",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/usuarios/login",
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"gerencia@cafeteria.com\",\n  \"password\": \"mala\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 401', () => pm.response.to.have.status(401));",
+                  "pm.test('Mismo mensaje en los dos casos', () => pm.expect(pm.response.json().detail).to.eql('Credenciales incorrectas'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST login con email inexistente → 401 (mismo mensaje)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/usuarios/login",
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"nadie@cafeteria.com\",\n  \"password\": \"admin123\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 401', () => pm.response.to.have.status(401));",
+                  "pm.test('Mismo mensaje en los dos casos', () => pm.expect(pm.response.json().detail).to.eql('Credenciales incorrectas'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST login del cliente registrado → token CLIENTE",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/usuarios/login",
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{emailNuevo}}\",\n  \"password\": \"cliente123\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "const t = pm.response.json().token;",
+                  "pm.test('Devuelve un JWT (3 partes)', () => pm.expect(t.split('.')).to.have.lengthOf(3));",
+                  "const datos = JSON.parse(atob(t.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')));",
+                  "pm.test('El token lleva el rol CLIENTE', () => pm.expect(datos.rol).to.eql('CLIENTE'));",
+                  "pm.collectionVariables.set('tokenCliente', t);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST login BARISTA → token BARISTA",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/usuarios/login",
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"marcos.barista@cafeteria.com\",\n  \"password\": \"barista123\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "const t = pm.response.json().token;",
+                  "pm.test('Devuelve un JWT (3 partes)', () => pm.expect(t.split('.')).to.have.lengthOf(3));",
+                  "const datos = JSON.parse(atob(t.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')));",
+                  "pm.test('El token lleva el rol BARISTA', () => pm.expect(datos.rol).to.eql('BARISTA'));",
+                  "pm.collectionVariables.set('tokenBarista', t);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST login ADMIN → token (el que usa toda la colección)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/usuarios/login",
+            "auth": {
+              "type": "noauth"
+            },
+            "description": "Guarda el token en {{token}}, que es el que usa la colección por defecto (Authorization: Bearer {{token}}).",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"gerencia@cafeteria.com\",\n  \"password\": \"admin123\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "const t = pm.response.json().token;",
+                  "pm.test('Devuelve un JWT (3 partes)', () => pm.expect(t.split('.')).to.have.lengthOf(3));",
+                  "const datos = JSON.parse(atob(t.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')));",
+                  "pm.test('El token lleva el rol ADMIN', () => pm.expect(datos.rol).to.eql('ADMIN'));",
+                  "pm.collectionVariables.set('token', t);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET carta sin token → 200 (pública)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/productos",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET pedidos sin token → 401",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/pedidos",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 401', () => pm.response.to.have.status(401));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET pedidos con token falso → 401",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/pedidos",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "token.falso.123",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 401', () => pm.response.to.have.status(401));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET pedidos con token CLIENTE → 200",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/pedidos",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenCliente}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "DELETE producto con token CLIENTE → 403",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": "{{baseUrl}}/productos/{{productoEspresso}}",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenCliente}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 403', () => pm.response.to.have.status(403));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET informe con token BARISTA → 403",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/informes/ventas-dia?fecha=2026-10-04",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenBarista}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 403', () => pm.response.to.have.status(403));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "PATCH disponibilidad con token BARISTA → 200",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/productos/{{productoEspresso}}/disponibilidad",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenBarista}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "description": "El personal (ADMIN y BARISTA) puede agotar o reponer. El espresso ya estaba disponible, así que no cambia nada.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"disponible\": true\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
     {
       "name": "1. Categorías",
       "description": "Endpoints 7 y 8. RF-03: agotar o reponer una categoría entera.",
@@ -5517,6 +6084,32 @@
     {
       "key": "cuponFijoCodigo",
       "value": ""
+    },
+    {
+      "key": "token",
+      "value": ""
+    },
+    {
+      "key": "tokenCliente",
+      "value": ""
+    },
+    {
+      "key": "tokenBarista",
+      "value": ""
+    },
+    {
+      "key": "emailNuevo",
+      "value": ""
     }
-  ]
+  ],
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{token}}",
+        "type": "string"
+      }
+    ]
+  }
 }

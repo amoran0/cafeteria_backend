@@ -5,7 +5,7 @@ DROP TABLE IF EXISTS pedido_producto, pedido_cupon, pedido, descuento, cupon,
 DROP TYPE IF EXISTS estado_pedido, turno_pedido, rol_usuario, tipo_cupon CASCADE;
 
 CREATE TYPE estado_pedido AS ENUM ('PENDIENTE', 'EN_PREPARACION', 'LISTO', 'ENTREGADO', 'CANCELADO');
-CREATE TYPE rol_usuario AS ENUM ('ADMIN', 'BARISTA', 'CAMARERO', 'CLIENTE');
+CREATE TYPE rol_usuario AS ENUM ('ADMIN', 'BARISTA', 'CLIENTE');
 CREATE TYPE tipo_cupon AS ENUM ('FIJO', 'PORCENTAJE');
 
 
@@ -43,11 +43,14 @@ CREATE TABLE producto_alergeno (
     FOREIGN KEY (id_alergeno) REFERENCES alergeno(id_alergeno)
 );
 
+-- Usuarios que inician sesión en la API (Spring Security + JWT): el mail es el nombre de usuario
 CREATE TABLE usuario (
     id_usuario UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     rol rol_usuario NOT NULL DEFAULT 'CLIENTE',
     mail VARCHAR UNIQUE NOT NULL,
-    contrasena VARCHAR NOT NULL
+    contrasena VARCHAR NOT NULL,                      -- siempre cifrada con BCrypt ("{bcrypt}$2a$...")
+    activo BOOLEAN NOT NULL DEFAULT TRUE,             -- un usuario desactivado no puede iniciar sesión
+    fecha_alta TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE cliente (
@@ -102,21 +105,21 @@ CREATE TABLE pedido_producto (
 );
 
 
--- 1. Usuarios
+-- 1. Usuarios. Contraseñas cifradas con BCrypt; en claro son:
+--    ADMIN → admin123 · BARISTA → barista123 · CLIENTE → cliente123
 INSERT INTO usuario (id_usuario, rol, mail, contrasena) VALUES
-('a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11', 'ADMIN', 'gerencia@cafeteria.com', 'admin123'),
-('a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a12', 'BARISTA', 'marcos.barista@cafeteria.com', 'hash_pass_barista1'),
-('a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a13', 'CAMARERO', 'lucia.camarera@cafeteria.com', 'hash_pass_camarero2'),
-('a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a14', 'CLIENTE', 'carlos.gomez@gmail.com', 'hash_pass_123'),
-('a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a15', 'CLIENTE', 'maria.lopez@yahoo.com', 'hash_pass_456'),
-('a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a16', 'CLIENTE', 'juan.perez@hotmail.com', 'hash_pass_789'),
-('a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a17', 'CLIENTE', 'ana.martinez@gmail.com', 'hash_pass_abc'),
-('a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a18', 'CLIENTE', 'luis.fernandez@outlook.com', 'hash_pass_def'),
-('a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a19', 'CLIENTE', 'laura.sanchez@gmail.com', 'hash_pass_ghi'),
-('a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a20', 'CLIENTE', 'diego.ramirez@yahoo.com', 'hash_pass_jkl'),
-('a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a21', 'CLIENTE', 'marta.ruiz@gmail.com', 'hash_pass_paso1'),
-('a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a22', 'CLIENTE', 'pedro.a@gmail.com', 'hash_pass_paso2'),
-('a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a23', 'CLIENTE', 'elena.p@gmail.com', 'hash_pass_paso3');
+('a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11', 'ADMIN', 'gerencia@cafeteria.com', '{bcrypt}$2a$10$cyRkWjy24fUFr.HJrql4Uuacw.rgdAN9XDkkRz5fEOeJucebG9STy'),
+('a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a12', 'BARISTA', 'marcos.barista@cafeteria.com', '{bcrypt}$2a$10$//qzk8FDIULPkf0vcn77OeD9HrnLKClcOImNRqdmD8SxHqDiIfyLC'),
+('a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a14', 'CLIENTE', 'carlos.gomez@gmail.com', '{bcrypt}$2a$10$iXAQ8mkg7bN.fKPmD/3mF.27tlIHSfKqm8zdGeZVIWvqMAyTvcKI6'),
+('a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a15', 'CLIENTE', 'maria.lopez@yahoo.com', '{bcrypt}$2a$10$iXAQ8mkg7bN.fKPmD/3mF.27tlIHSfKqm8zdGeZVIWvqMAyTvcKI6'),
+('a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a16', 'CLIENTE', 'juan.perez@hotmail.com', '{bcrypt}$2a$10$iXAQ8mkg7bN.fKPmD/3mF.27tlIHSfKqm8zdGeZVIWvqMAyTvcKI6'),
+('a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a17', 'CLIENTE', 'ana.martinez@gmail.com', '{bcrypt}$2a$10$iXAQ8mkg7bN.fKPmD/3mF.27tlIHSfKqm8zdGeZVIWvqMAyTvcKI6'),
+('a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a18', 'CLIENTE', 'luis.fernandez@outlook.com', '{bcrypt}$2a$10$iXAQ8mkg7bN.fKPmD/3mF.27tlIHSfKqm8zdGeZVIWvqMAyTvcKI6'),
+('a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a19', 'CLIENTE', 'laura.sanchez@gmail.com', '{bcrypt}$2a$10$iXAQ8mkg7bN.fKPmD/3mF.27tlIHSfKqm8zdGeZVIWvqMAyTvcKI6'),
+('a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a20', 'CLIENTE', 'diego.ramirez@yahoo.com', '{bcrypt}$2a$10$iXAQ8mkg7bN.fKPmD/3mF.27tlIHSfKqm8zdGeZVIWvqMAyTvcKI6'),
+('a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a21', 'CLIENTE', 'marta.ruiz@gmail.com', '{bcrypt}$2a$10$iXAQ8mkg7bN.fKPmD/3mF.27tlIHSfKqm8zdGeZVIWvqMAyTvcKI6'),
+('a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a22', 'CLIENTE', 'pedro.a@gmail.com', '{bcrypt}$2a$10$iXAQ8mkg7bN.fKPmD/3mF.27tlIHSfKqm8zdGeZVIWvqMAyTvcKI6'),
+('a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a23', 'CLIENTE', 'elena.p@gmail.com', '{bcrypt}$2a$10$iXAQ8mkg7bN.fKPmD/3mF.27tlIHSfKqm8zdGeZVIWvqMAyTvcKI6');
 
 -- 2. Clientes
 INSERT INTO cliente (id_cliente, id_usuario, nombre, mail, dni) VALUES
@@ -281,11 +284,11 @@ INSERT INTO producto_alergeno (id_producto, id_alergeno) VALUES
 
 -- 10.4 Usuarios: una barista de tarde y cuatro clientes nuevos (5)
 INSERT INTO usuario (id_usuario, rol, mail, contrasena) VALUES
-('a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a24', 'BARISTA', 'sofia.barista@cafeteria.com', 'hash_pass_barista3'),
-('a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a25', 'CLIENTE', 'javier.molina@gmail.com', 'hash_pass_mno'),
-('a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a26', 'CLIENTE', 'carmen.ortiz@hotmail.com', 'hash_pass_pqr'),
-('a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a27', 'CLIENTE', 'raul.navarro@outlook.com', 'hash_pass_stu'),
-('a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a28', 'CLIENTE', 'irene.castro@gmail.com', 'hash_pass_vwx');
+('a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a24', 'BARISTA', 'sofia.barista@cafeteria.com', '{bcrypt}$2a$10$//qzk8FDIULPkf0vcn77OeD9HrnLKClcOImNRqdmD8SxHqDiIfyLC'),
+('a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a25', 'CLIENTE', 'javier.molina@gmail.com', '{bcrypt}$2a$10$iXAQ8mkg7bN.fKPmD/3mF.27tlIHSfKqm8zdGeZVIWvqMAyTvcKI6'),
+('a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a26', 'CLIENTE', 'carmen.ortiz@hotmail.com', '{bcrypt}$2a$10$iXAQ8mkg7bN.fKPmD/3mF.27tlIHSfKqm8zdGeZVIWvqMAyTvcKI6'),
+('a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a27', 'CLIENTE', 'raul.navarro@outlook.com', '{bcrypt}$2a$10$iXAQ8mkg7bN.fKPmD/3mF.27tlIHSfKqm8zdGeZVIWvqMAyTvcKI6'),
+('a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a28', 'CLIENTE', 'irene.castro@gmail.com', '{bcrypt}$2a$10$iXAQ8mkg7bN.fKPmD/3mF.27tlIHSfKqm8zdGeZVIWvqMAyTvcKI6');
 
 -- 10.5 Clientes de esos usuarios (4)
 INSERT INTO cliente (id_cliente, id_usuario, nombre, mail, dni) VALUES

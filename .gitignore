@@ -34,3 +34,6 @@ build/
 
 ### Configuraciones de ejecución locales (contienen credenciales) ###
 .run/
+
+### Variables de entorno (credenciales de la BD y secreto JWT) ###
+.env
