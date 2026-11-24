@@ -7,6 +7,10 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+/**
+ * Ficha de cliente de la cafetería. Se crea al registrarse; nombre y DNI son opcionales
+ * (el DNI solo hace falta para el descuento de socio de FitZone).
+ */
 @Entity
 @Table(name = "cliente")
 @Getter
@@ -24,12 +28,12 @@ public class Cliente {
     @JoinColumn(name = "id_usuario", nullable = false, unique = true)
     private Usuario usuario;
 
-    @Column(name = "nombre", nullable = false)
+    @Column(name = "nombre")
     private String nombre;
 
     @Column(name = "mail", nullable = false)
     private String mail;
 
-    @Column(name = "dni", nullable = false, unique = true)
+    @Column(name = "dni", unique = true)
     private String dni;
 }

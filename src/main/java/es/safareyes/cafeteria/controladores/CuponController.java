@@ -6,10 +6,13 @@ import es.safareyes.cafeteria.dtos.CuponValidacionRequestDto;
 import es.safareyes.cafeteria.dtos.CuponValidacionResponseDto;
 import jakarta.validation.Valid;
 import lombok.AllArgsConstructor;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 import es.safareyes.cafeteria.servicios.CuponService;
+
+import java.net.URI;
 
 @RestController
 @AllArgsConstructor
@@ -18,8 +21,12 @@ public class CuponController {
     private CuponService cuponService;
 
     @PostMapping
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<CuponResponseDto> crear(@Valid @RequestBody CuponRequestDto dto) {
-        return ResponseEntity.status(HttpStatus.CREATED).body(cuponService.crear(dto));
+        CuponResponseDto creado = cuponService.crear(dto);
+        URI location = ServletUriComponentsBuilder.fromCurrentRequest()
+                .path("/{id}").buildAndExpand(creado.id()).toUri();
+        return ResponseEntity.created(location).body(creado);
     }
 
     @PostMapping("/validar")

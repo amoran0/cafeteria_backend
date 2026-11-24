@@ -7,8 +7,12 @@ import jakarta.validation.constraints.NotNull;
 import java.util.List;
 import java.util.UUID;
 
+/**
+ * clienteId es opcional: un CLIENTE siempre pide para sí mismo (sale de su token) y
+ * un BARISTA puede indicarlo o dejarlo vacío para un pedido de barra sin cliente.
+ */
 public record PedidoRequestDto(
-        @NotNull(message = "El cliente es obligatorio") UUID clienteId,
+        UUID clienteId,
         @NotEmpty(message = "El pedido debe tener líneas") List<@Valid Linea> lineas,
         String codigoCupon,
         String dniSocio

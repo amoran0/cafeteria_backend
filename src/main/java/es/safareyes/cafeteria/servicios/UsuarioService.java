@@ -5,9 +5,12 @@ import es.safareyes.cafeteria.dtos.LoginDTO;
 import es.safareyes.cafeteria.dtos.LoginResponse;
 import es.safareyes.cafeteria.dtos.UsuarioDTO;
 import es.safareyes.cafeteria.excepciones.CredencialesIncorrectas;
+import es.safareyes.cafeteria.excepciones.ElementoDuplicado;
 import es.safareyes.cafeteria.excepciones.ReglaNegocioException;
+import es.safareyes.cafeteria.modelos.Cliente;
 import es.safareyes.cafeteria.modelos.RolUsuario;
 import es.safareyes.cafeteria.modelos.Usuario;
+import es.safareyes.cafeteria.repositorios.IClienteRepositorio;
 import es.safareyes.cafeteria.repositorios.IUsuarioRepositorio;
 import es.safareyes.cafeteria.security.JWTService;
 import lombok.AllArgsConstructor;
@@ -16,6 +19,7 @@ import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 
@@ -23,8 +27,9 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 public class UsuarioService implements UserDetailsService {
 
-    private final PasswordEncoder passwordEncoder;
+    private PasswordEncoder passwordEncoder;
     private IUsuarioRepositorio repository;
+    private IClienteRepositorio clienteRepositorio;
     private UsuarioMapper mapper;
     private JWTService jwtService;
 
@@ -34,11 +39,13 @@ public class UsuarioService implements UserDetailsService {
                 .orElseThrow(() -> new UsernameNotFoundException("No se ha encontrado el usuario"));
     }
 
+    /** Alta de un usuario CLIENTE y de su ficha de cliente de la cafetería, en la misma transacción */
+    @Transactional
     public void guardarUsuario(UsuarioDTO dto) {
         if (!dto.password().equals(dto.confirmPassword()))
             throw new ReglaNegocioException("Las contraseñas no coinciden");
         if (repository.existsByMailIgnoreCase(dto.email()))
-            throw new ReglaNegocioException("Ya existe un usuario con ese email");
+            throw new ElementoDuplicado("Ya existe un usuario con ese email");   // duplicado → 409
 
         Usuario usuarioGuardar = mapper.toEntity(dto);
         usuarioGuardar.setFechaAlta(LocalDateTime.now());
@@ -47,6 +54,12 @@ public class UsuarioService implements UserDetailsService {
         usuarioGuardar.setContrasena(passwordEncoder.encode(dto.password()));
 
         repository.save(usuarioGuardar);
+
+        // al registrarse pasa a ser cliente de la cafetería (el DNI solo hace falta para FitZone)
+        Cliente ficha = new Cliente();
+        ficha.setUsuario(usuarioGuardar);
+        ficha.setMail(usuarioGuardar.getMail());
+        clienteRepositorio.save(ficha);
     }
 
     public LoginResponse login(LoginDTO dto) {

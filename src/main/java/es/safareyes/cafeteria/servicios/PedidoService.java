@@ -10,6 +10,7 @@ import es.safareyes.cafeteria.conversores.PedidoMapper;
 import es.safareyes.cafeteria.modelos.*;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import es.safareyes.cafeteria.repositorios.IClienteRepositorio;
@@ -38,9 +39,8 @@ public class PedidoService {
     private PedidoMapper mapper;
 
     @Transactional
-    public PedidoResponseDto crear(PedidoRequestDto dto) {
-        Cliente cliente = clienteRepositorio.findById(dto.clienteId())
-                .orElseThrow(() -> new ElementoNoEncontrado("No existe ningún cliente con id " + dto.clienteId()));
+    public PedidoResponseDto crear(PedidoRequestDto dto, Usuario usuario) {
+        Cliente cliente = clienteDelPedido(dto.clienteId(), usuario);
 
         // RN-04: cada línea recibida debe tener entre 1 y 20 unidades ANTES de agrupar,
         // para que una cantidad negativa o 0 no se "compense" con otra línea del mismo producto
@@ -62,32 +62,18 @@ public class PedidoService {
 
         Pedido pedido = new Pedido();
         pedido.setCliente(cliente);
-        pedido.setFecha(LocalDateTime.now());
-        pedido.setEstado(EstadoPedido.PENDIENTE);
+        pedido.setFecha(LocalDateTime.now());   // el estado ya nace PENDIENTE
 
         BigDecimal subtotal = BigDecimal.ZERO;
         for (Map.Entry<UUID, Integer> entrada : cantidades.entrySet()) {
             int cantidad = entrada.getValue();
             Producto producto = productoRepositorio.findById(entrada.getKey())
                     .orElseThrow(() -> new ElementoNoEncontrado("No existe ningún producto con id " + entrada.getKey()));
-            if (cantidad < 1 || cantidad > 20) {
+            if (cantidad > 20) {   // cada línea ya tiene al menos 1: aquí solo puede pasarse de 20 al sumar
                 throw new ReglaNegocioException("La línea del producto '" + producto.getNombre() + "' tiene " + cantidad
                         + " unidades y debe tener entre 1 y 20 (si el producto se repite, se suman sus cantidades) (RN-04)");
             }
-            // RN-01 y RN-02
-            if (!Boolean.TRUE.equals(producto.getActiva())) {
-                throw new ReglaNegocioException("El producto '" + producto.getNombre() + "' (id " + producto.getIdProducto()
-                        + ") está dado de baja y no se puede pedir (RN-02)");
-            }
-            if (!Boolean.TRUE.equals(producto.getCategoria().getDisponible())) {
-                throw new ReglaNegocioException("El producto '" + producto.getNombre() + "' (id " + producto.getIdProducto()
-                        + ") está agotado porque su categoría '" + producto.getCategoria().getNombre()
-                        + "' está agotada y no se puede pedir (RN-02)");
-            }
-            if (!Boolean.TRUE.equals(producto.getDisponible())) {
-                throw new ReglaNegocioException("El producto '" + producto.getNombre() + "' (id " + producto.getIdProducto()
-                        + ") está agotado y no se puede pedir (RN-02)");
-            }
+            comprobarSePuedePedir(producto);
             LineaPedido linea = new LineaPedido();
             linea.setPedido(pedido);
             linea.setProducto(producto);
@@ -101,7 +87,8 @@ public class PedidoService {
         BigDecimal descuento = BigDecimal.ZERO;
         Cupon cupon = null;
         if (dto.codigoCupon() != null && !dto.codigoCupon().isBlank()) {
-            cupon = cuponService.buscarValido(dto.codigoCupon(), subtotal, cliente.getMail());
+            // sin cliente (pedido de barra) no hay email: un cupón personal no será válido
+            cupon = cuponService.buscarValido(dto.codigoCupon(), subtotal, cliente == null ? null : cliente.getMail());
             descuento = cuponService.calcularDescuento(cupon, subtotal);
         }
         if (dto.dniSocio() != null && !dto.dniSocio().isBlank() && fitZoneClient.esSocioActivo(dto.dniSocio())) {
@@ -130,17 +117,31 @@ public class PedidoService {
         return mapper.toDto(pedidoRepositorio.save(pedido));
     }
 
+    /** Un CLIENTE solo puede ver sus propios pedidos: si no es suyo → 403 */
     @Transactional(readOnly = true)
-    public PedidoResponseDto obtener(UUID id) {
-        return mapper.toDto(buscar(id));
+    public PedidoResponseDto obtener(UUID id, Usuario usuario) {
+        Pedido pedido = buscar(id);
+        UUID propio = clientePropio(usuario);
+        if (propio != null && (pedido.getCliente() == null || !propio.equals(pedido.getCliente().getIdCliente()))) {
+            throw new AccessDeniedException("El pedido " + id + " no es tuyo: un cliente solo puede consultar sus propios pedidos");
+        }
+        return mapper.toDto(pedido);
     }
 
+    /** Un CLIENTE solo ve sus pedidos: el filtro de cliente se fuerza al suyo */
     @Transactional(readOnly = true)
     public Page<PedidoResponseDto> listar(UUID clienteId, EstadoPedido estado, LocalDateTime desde,
-                                          LocalDateTime hasta, Pageable pageable) {
+                                          LocalDateTime hasta, Pageable pageable, Usuario usuario) {
         // hasta llega ya como el inicio del día siguiente, así que hasta <= desde equivale a hasta < desde en fechas
         if (desde != null && hasta != null && !hasta.isAfter(desde)) {
             throw new IllegalArgumentException("La fecha 'hasta' no puede ser anterior a la fecha 'desde'");
+        }
+        UUID propio = clientePropio(usuario);
+        if (propio != null) {
+            if (clienteId != null && !clienteId.equals(propio)) {
+                throw new AccessDeniedException("Un cliente solo puede consultar sus propios pedidos");
+            }
+            clienteId = propio;
         }
         // sin filtro = todos los estados y un rango de fechas amplio (Postgres no admite parámetros nulos aquí)
         List<EstadoPedido> estados = estado == null ? List.of(EstadoPedido.values()) : List.of(estado);
@@ -162,6 +163,51 @@ public class PedidoService {
         }
         pedido.setEstado(nuevo); // al cancelar, el uso del cupón se libera: solo cuentan pedidos no cancelados
         return mapper.toDto(pedido);
+    }
+
+    /**
+     * Cliente al que se asigna el pedido (opcional, 5.5):
+     * un CLIENTE siempre pide para su propia ficha; el personal puede indicar un cliente o ninguno (pedido de barra).
+     */
+    private Cliente clienteDelPedido(UUID clienteId, Usuario usuario) {
+        UUID propio = clientePropio(usuario);
+        if (propio != null && clienteId != null && !clienteId.equals(propio)) {
+            throw new AccessDeniedException("Un cliente solo puede crear pedidos para sí mismo");
+        }
+        UUID id = propio != null ? propio : clienteId;
+        if (id == null) {
+            return null;   // pedido de barra sin cliente
+        }
+        return clienteRepositorio.findById(id)
+                .orElseThrow(() -> new ElementoNoEncontrado("No existe ningún cliente con id " + id));
+    }
+
+    /**
+     * Id de la ficha de cliente (se crea al registrarse) si el usuario con sesión es CLIENTE;
+     * null si es personal (ADMIN o BARISTA), que puede ver y crear pedidos de cualquiera.
+     */
+    private UUID clientePropio(Usuario usuario) {
+        if (usuario.getRol() != RolUsuario.CLIENTE) {
+            return null;
+        }
+        return clienteRepositorio.findByUsuario_IdUsuario(usuario.getIdUsuario())
+                .map(Cliente::getIdCliente)
+                .orElseThrow(() -> new ReglaNegocioException("El usuario " + usuario.getMail() + " no tiene ficha de cliente"));
+    }
+
+    /** RN-01 y RN-02: solo se pueden pedir productos activos, disponibles y de una categoría disponible */
+    private void comprobarSePuedePedir(Producto producto) {
+        String nombre = "El producto '" + producto.getNombre() + "' (id " + producto.getIdProducto() + ")";
+        if (!Boolean.TRUE.equals(producto.getActiva())) {
+            throw new ReglaNegocioException(nombre + " está dado de baja y no se puede pedir (RN-02)");
+        }
+        if (!Boolean.TRUE.equals(producto.getCategoria().getDisponible())) {
+            throw new ReglaNegocioException(nombre + " está agotado porque su categoría '"
+                    + producto.getCategoria().getNombre() + "' está agotada y no se puede pedir (RN-02)");
+        }
+        if (!Boolean.TRUE.equals(producto.getDisponible())) {
+            throw new ReglaNegocioException(nombre + " está agotado y no se puede pedir (RN-02)");
+        }
     }
 
     private Pedido buscar(UUID id) {

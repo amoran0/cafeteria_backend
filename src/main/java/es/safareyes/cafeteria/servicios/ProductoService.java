@@ -8,16 +8,17 @@ import es.safareyes.cafeteria.conversores.ProductoMapper;
 import es.safareyes.cafeteria.modelos.Alergeno;
 import es.safareyes.cafeteria.modelos.Producto;
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import es.safareyes.cafeteria.repositorios.IAlergenoRepositorio;
 import es.safareyes.cafeteria.repositorios.ICategoriaRepositorio;
 import es.safareyes.cafeteria.repositorios.IProductoRepositorio;
+import es.safareyes.cafeteria.repositorios.ProductoSpecifications;
 
 import java.math.BigDecimal;
-import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
 import java.util.UUID;
@@ -63,23 +64,20 @@ public class ProductoService {
         productoRepositorio.save(producto);
     }
 
-    /** RF-02: carta con filtros (los dados de baja no aparecen) */
+    /**
+     * RF-02: carta con filtros combinables (Specification, Q7), paginada y ordenada en la BD.
+     * Sin ?sort= se ordena por nombre; con ?sort=precioVenta,asc (u otro campo) se respeta el orden pedido.
+     */
+    @Transactional(readOnly = true)
     public Page<ProductoResponseDto> listarCarta(UUID categoriaId, String nombre, BigDecimal precioMaximo,
                                       Boolean disponible, UUID sinAlergenoId, Pageable pageable) {
-        String nombreFiltro = nombre == null ? null : nombre.trim().toLowerCase();
-        List<Producto> filtrados = productoRepositorio.findAll().stream()
-                .filter(p -> Boolean.TRUE.equals(p.getActiva()))
-                .filter(p -> categoriaId == null || p.getCategoria().getIdCategoria().equals(categoriaId))
-                .filter(p -> nombreFiltro == null || p.getNombre().toLowerCase().contains(nombreFiltro))
-                .filter(p -> precioMaximo == null || p.getPrecioVenta().compareTo(precioMaximo) <= 0)
-                .filter(p -> disponible == null || disponible.equals(p.getDisponible()))
-                .filter(p -> sinAlergenoId == null || p.getAlergenos().stream()
-                        .noneMatch(a -> a.getIdAlergeno().equals(sinAlergenoId)))
-                .sorted(Comparator.comparing(Producto::getNombre, String.CASE_INSENSITIVE_ORDER))
-                .toList();
-        int inicio = (int) Math.min(pageable.getOffset(), filtrados.size());
-        int fin = Math.min(inicio + pageable.getPageSize(), filtrados.size());
-        return new PageImpl<>(mapper.toDto(filtrados.subList(inicio, fin)), pageable, filtrados.size());
+        Pageable pagina = pageable.getSort().isSorted()
+                ? pageable
+                : PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(),
+                        Sort.by(Sort.Order.asc("nombre").ignoreCase()));
+        return productoRepositorio
+                .findAll(ProductoSpecifications.carta(categoriaId, nombre, precioMaximo, disponible, sinAlergenoId), pagina)
+                .map(mapper::toDto);
     }
 
     private Producto buscar(UUID id) {

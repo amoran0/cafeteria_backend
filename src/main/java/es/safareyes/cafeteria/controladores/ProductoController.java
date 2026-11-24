@@ -7,12 +7,13 @@ import jakarta.validation.Valid;
 import lombok.AllArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 import es.safareyes.cafeteria.servicios.ProductoService;
 
 import java.math.BigDecimal;
+import java.net.URI;
 import java.util.UUID;
 
 @RestController
@@ -40,8 +41,10 @@ public class ProductoController {
 
     @PostMapping
     public ResponseEntity<ProductoResponseDto> crear(@Valid @RequestBody ProductoRequestDto dto) {
-        return ResponseEntity.status(HttpStatus.CREATED)
-                .body(productoService.crearProducto(dto));
+        ProductoResponseDto creado = productoService.crearProducto(dto);
+        URI location = ServletUriComponentsBuilder.fromCurrentRequest()
+                .path("/{id}").buildAndExpand(creado.id()).toUri();
+        return ResponseEntity.created(location).body(creado);
     }
 
     @PutMapping("/{id}")

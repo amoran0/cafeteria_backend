@@ -26,14 +26,13 @@ public class CategoriaService {
         return categoriaRepositorio.buscarCategoriasProductosActivos();
     }
 
-    /** RF-03: agota o repone la categoría y todos sus productos */
+    /** RF-03: agota o repone la categoría y todos sus productos en una sola operación (UPDATE masivo, Q4) */
     @Transactional
     public CategoriaResponseDto cambiarDisponibilidad(UUID id, Boolean disponible) {
         Categoria categoria = categoriaRepositorio.findById(id)
                 .orElseThrow(() -> new ElementoNoEncontrado("No existe ninguna categoría con id " + id));
         categoria.setDisponible(disponible);
-        productoRepositorio.findByCategoria_IdCategoria(id)
-                .forEach(p -> p.setDisponible(disponible));
+        productoRepositorio.cambiarDisponibilidadCategoria(id, disponible);
         return mapper.toDto(categoria);
     }
 }

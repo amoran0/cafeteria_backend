@@ -4,13 +4,15 @@ import es.safareyes.cafeteria.excepciones.CredencialesIncorrectas;
 import es.safareyes.cafeteria.excepciones.ElementoDuplicado;
 import es.safareyes.cafeteria.excepciones.ElementoNoEncontrado;
 import es.safareyes.cafeteria.excepciones.ReglaNegocioException;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.InvalidDataAccessApiUsageException;
+import org.springframework.data.core.PropertyReferenceException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ProblemDetail;
 import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.authorization.AuthorizationDeniedException;
 import org.springframework.web.HttpMediaTypeNotSupportedException;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -33,9 +35,8 @@ import java.util.stream.Collectors;
  * (trazas, nombres de clases Java, consultas JPQL...).
  */
 @RestControllerAdvice
+@Slf4j
 public class ErrorGlobalController {
-
-    private static final Logger log = LoggerFactory.getLogger(ErrorGlobalController.class);
 
     @ExceptionHandler(ReglaNegocioException.class)
     public ProblemDetail reglaNegocio(ReglaNegocioException e) {
@@ -49,13 +50,25 @@ public class ErrorGlobalController {
 
     @ExceptionHandler(ElementoDuplicado.class)
     public ProblemDetail elementoDuplicado(ElementoDuplicado e) {
-        return construir(HttpStatus.CONFLICT, "Elemento duplicado", e.getMessage());
+        return construir(HttpStatus.CONFLICT, "Regla de negocio no cumplida", e.getMessage());
     }
 
     /** Login fallido */
     @ExceptionHandler(CredencialesIncorrectas.class)
     public ProblemDetail credencialesIncorrectas(CredencialesIncorrectas e) {
-        return construir(HttpStatus.UNAUTHORIZED, "Credenciales incorrectas", e.getMessage());
+        return construir(HttpStatus.UNAUTHORIZED, "Regla de negocio no cumplida", e.getMessage());
+    }
+
+    /**
+     * 403 dentro de controladores y servicios: @PreAuthorize (AuthorizationDeniedException) o recurso ajeno
+     * (un cliente pide un pedido que no es suyo). Los 403 de las reglas por ruta los responde SecurityConfig.
+     */
+    @ExceptionHandler(AccessDeniedException.class)
+    public ProblemDetail accesoDenegado(AccessDeniedException e) {
+        String detalle = e instanceof AuthorizationDeniedException
+                ? "Tu rol no tiene permiso para esta operación"
+                : e.getMessage();
+        return construir(HttpStatus.FORBIDDEN, "Acceso denegado", detalle);
     }
 
     /** Lo lanzan los servicios con mensajes propios (p. ej. límites de los informes) */
@@ -106,9 +119,12 @@ public class ErrorGlobalController {
         return construir(HttpStatus.BAD_REQUEST, "Cuerpo de la petición no válido", detalle);
     }
 
-    /** Ordenación (?sort=) por un campo que no existe */
-    @ExceptionHandler(InvalidDataAccessApiUsageException.class)
-    public ProblemDetail ordenacionIncorrecta(InvalidDataAccessApiUsageException e) {
+    /**
+     * Ordenación (?sort=) por un campo que no existe. Con consultas JPQL llega envuelta en
+     * InvalidDataAccessApiUsageException; con Specification (carta) llega como PropertyReferenceException.
+     */
+    @ExceptionHandler({InvalidDataAccessApiUsageException.class, PropertyReferenceException.class})
+    public ProblemDetail ordenacionIncorrecta(RuntimeException e) {
         return construir(HttpStatus.BAD_REQUEST, "Parámetro no válido",
                 "El parámetro 'sort' hace referencia a un campo que no existe");
     }

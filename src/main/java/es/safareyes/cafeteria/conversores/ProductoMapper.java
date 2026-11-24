@@ -9,7 +9,6 @@ import org.mapstruct.Mapping;
 import org.mapstruct.MappingTarget;
 import org.mapstruct.NullValuePropertyMappingStrategy;
 
-import java.util.List;
 
 @Mapper(componentModel = "spring", nullValuePropertyMappingStrategy = NullValuePropertyMappingStrategy.IGNORE)
 public interface ProductoMapper {
@@ -17,8 +16,6 @@ public interface ProductoMapper {
     @Mapping(source = "idProducto", target = "id")
     @Mapping(source = "categoria.idCategoria", target = "categoriaId")
     ProductoResponseDto toDto(Producto producto);
-
-    List<ProductoResponseDto> toDto(List<Producto> productos);
 
     @Mapping(source = "idAlergeno", target = "id")
     ProductoResponseDto.AlergenoDto toDto(Alergeno alergeno);

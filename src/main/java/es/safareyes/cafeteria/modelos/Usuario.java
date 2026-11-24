@@ -67,21 +67,6 @@ public class Usuario implements UserDetails {
         return contrasena;
     }
 
-    @Override
-    public boolean isAccountNonExpired() {
-        return UserDetails.super.isAccountNonExpired();
-    }
-
-    @Override
-    public boolean isAccountNonLocked() {
-        return UserDetails.super.isAccountNonLocked();
-    }
-
-    @Override
-    public boolean isCredentialsNonExpired() {
-        return UserDetails.super.isCredentialsNonExpired();
-    }
-
     /** Un usuario desactivado no puede iniciar sesión ni usar su token */
     @Override
     public boolean isEnabled() {

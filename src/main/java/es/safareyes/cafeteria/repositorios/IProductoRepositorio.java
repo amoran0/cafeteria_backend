@@ -7,8 +7,12 @@ import java.util.UUID;
 import es.safareyes.cafeteria.dtos.CategoriaNombrePrecioDisponibilidad;
 import es.safareyes.cafeteria.dtos.ProducotsMasVendidos;
 import es.safareyes.cafeteria.dtos.ProductoPorAlergeno;
+import org.springframework.data.domain.Page;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.EntityGraph;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -18,11 +22,20 @@ import es.safareyes.cafeteria.modelos.Producto;
 import org.springframework.data.domain.Pageable;
 
 @Repository
-public interface IProductoRepositorio extends JpaRepository<Producto, UUID> {
+public interface IProductoRepositorio extends JpaRepository<Producto, UUID>, JpaSpecificationExecutor<Producto> {
 
     @Override
     @EntityGraph(attributePaths = {"categoria", "alergenos"})
     List<Producto> findAll();
+
+    /**
+     * Carta (RF-02, Q7): filtros combinables con ProductoSpecifications, paginada y ordenada.
+     * Solo se trae la categoría con JOIN: hacer fetch de la colección de alérgenos junto con la
+     * paginación obligaría a Hibernate a paginar en memoria.
+     */
+    @Override
+    @EntityGraph(attributePaths = {"categoria"})
+    Page<Producto> findAll(Specification<Producto> spec, Pageable pageable);
 
     @Override
     @EntityGraph(attributePaths = {"categoria", "alergenos"})
@@ -75,7 +88,15 @@ public interface IProductoRepositorio extends JpaRepository<Producto, UUID> {
             @Param("alergenoId") UUID alergenoId
     );
 
-    List<Producto> findByCategoria_IdCategoria(UUID categoriaId);
+    /**
+     * RF-03 (Q4): agota o repone de golpe todos los productos de una categoría.
+     * flushAutomatically guarda antes los cambios pendientes; clearAutomatically vacía el contexto
+     * para que no queden entidades Producto en memoria con el valor antiguo.
+     */
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query("UPDATE Producto p SET p.disponible = :disponible WHERE p.categoria.idCategoria = :categoriaId")
+    int cambiarDisponibilidadCategoria(@Param("categoriaId") UUID categoriaId,
+                                       @Param("disponible") Boolean disponible);
 
     /** RN-10: ranking de productos de pedidos en el estado indicado (ENTREGADO) */
     @Query("""

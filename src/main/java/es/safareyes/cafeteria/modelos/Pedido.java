@@ -24,8 +24,9 @@ public class Pedido {
     @Column(name = "id_pedido")
     private UUID idPedido;
 
+    /** Opcional: null en los pedidos de barra que el barista toma sin cliente registrado */
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "id_cliente", nullable = false)
+    @JoinColumn(name = "id_cliente")
     private Cliente cliente;
 
     /** Cupón aplicado (null si no hay o si ganó el descuento de socio, RN-07) */

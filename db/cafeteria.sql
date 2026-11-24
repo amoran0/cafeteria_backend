@@ -20,8 +20,8 @@ CREATE TABLE producto (
     id_categoria UUID NOT NULL,
     nombre VARCHAR NOT NULL,
     descripcion TEXT,
-    precio_base DECIMAL,
-    precio_venta DECIMAL NOT NULL,          -- IVA (10 %) incluido, RN-05
+    precio_base NUMERIC(10,2),
+    precio_venta NUMERIC(10,2) NOT NULL,          -- IVA (10 %) incluido, RN-05
     disponible BOOLEAN DEFAULT TRUE,        -- agotado / disponible
     activa BOOLEAN DEFAULT TRUE,            -- baja lógica, RN-01
     iva DECIMAL,
@@ -56,9 +56,9 @@ CREATE TABLE usuario (
 CREATE TABLE cliente (
     id_cliente UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     id_usuario UUID UNIQUE NOT NULL,
-    nombre VARCHAR NOT NULL,
+    nombre VARCHAR,                         -- opcional: el registro solo pide email y contraseña
     mail VARCHAR NOT NULL,
-    dni VARCHAR UNIQUE NOT NULL,
+    dni VARCHAR UNIQUE,                     -- opcional: solo hace falta para el descuento de socio FitZone
 
     FOREIGN KEY (id_usuario) REFERENCES usuario(id_usuario)
 );
@@ -67,8 +67,8 @@ CREATE TABLE cupon (
     id_cupon UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     codigo VARCHAR UNIQUE NOT NULL,
     tipo tipo_cupon NOT NULL,
-    valor DECIMAL,
-    importe_min DECIMAL,
+    valor NUMERIC(10,2),
+    importe_min NUMERIC(10,2),
     max_usos INTEGER,
     fecha_inicio DATE,
     fecha_fin DATE,
@@ -78,16 +78,16 @@ CREATE TABLE cupon (
 
 CREATE TABLE pedido (
     id_pedido UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    id_cliente UUID NOT NULL,
+    id_cliente UUID,                        -- opcional: pedido de barra sin cliente registrado
     id_cupon UUID,
     estado estado_pedido NOT NULL DEFAULT 'PENDIENTE',
     fecha TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     numero_turno INTEGER NOT NULL,
-    subtotal DECIMAL(10,2) NOT NULL,
-    descuento DECIMAL(10,2) NOT NULL DEFAULT 0,
-    total DECIMAL(10,2) NOT NULL,
-    base_imponible DECIMAL(10,2) NOT NULL,
-    cuota_iva DECIMAL(10,2) NOT NULL,
+    subtotal NUMERIC(10,2) NOT NULL,
+    descuento NUMERIC(10,2) NOT NULL DEFAULT 0,
+    total NUMERIC(10,2) NOT NULL,
+    base_imponible NUMERIC(10,2) NOT NULL,
+    cuota_iva NUMERIC(10,2) NOT NULL,
 
     FOREIGN KEY (id_cliente) REFERENCES cliente(id_cliente),
     FOREIGN KEY (id_cupon) REFERENCES cupon(id_cupon)
@@ -97,7 +97,7 @@ CREATE TABLE pedido_producto (
     id_pedido UUID,
     id_producto UUID,
     cantidad INTEGER NOT NULL CHECK (cantidad BETWEEN 1 AND 20),
-    precio_unitario DECIMAL NOT NULL,
+    precio_unitario NUMERIC(10,2) NOT NULL,
 
     PRIMARY KEY (id_pedido, id_producto),
     FOREIGN KEY (id_pedido) REFERENCES pedido(id_pedido),

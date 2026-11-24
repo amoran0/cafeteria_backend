@@ -2,10 +2,12 @@ package es.safareyes.cafeteria.repositorios;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 import es.safareyes.cafeteria.modelos.EstadoPedido;
 import es.safareyes.cafeteria.modelos.Pedido;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -15,6 +17,14 @@ import org.springframework.stereotype.Repository;
 
 @Repository
 public interface IPedidoRepositorio extends JpaRepository<Pedido, UUID> {
+
+    /**
+     * Q8 (endpoint 10, GET /api/v1/pedidos/{id}): trae el pedido con sus líneas, el producto de cada línea y el cupón
+     * en una sola consulta con JOIN, en vez de 1 consulta para las líneas + 1 por cada producto (problema N+1).
+     */
+    @Override
+    @EntityGraph(attributePaths = {"lineas", "lineas.producto", "cupon"})
+    Optional<Pedido> findById(UUID id);
 
     @Query("""
         SELECT p FROM Pedido p
