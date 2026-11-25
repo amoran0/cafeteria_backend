@@ -7,6 +7,8 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ProblemDetail;
+import org.springframework.http.converter.json.ProblemDetailJacksonMixin;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
@@ -16,8 +18,10 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
+import tools.jackson.databind.json.JsonMapper;
+
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
+import java.net.URI;
 import java.time.LocalDateTime;
 
 @Configuration
@@ -85,15 +89,20 @@ public class SecurityConfig {
     /**
      * Los errores de seguridad se producen en los filtros, antes de llegar a los controladores, así que no pasan por
      * ErrorGlobalController: se escribe aquí el mismo formato ProblemDetail (type, title, status, detail, instance, timestamp).
+     * El mixin hace que "timestamp" salga al mismo nivel que title o status, igual que en ErrorGlobalController.
      */
+    private static final JsonMapper MAPPER = JsonMapper.builder()
+            .addMixIn(ProblemDetail.class, ProblemDetailJacksonMixin.class).build();
+
     private static void responder(HttpServletRequest peticion, HttpServletResponse respuesta, HttpStatus estado,
                                   String titulo, String detalle) throws IOException {
+        ProblemDetail problema = ProblemDetail.forStatusAndDetail(estado, detalle);
+        problema.setTitle(titulo);
+        problema.setInstance(URI.create(peticion.getRequestURI()));
+        problema.setProperty("timestamp", LocalDateTime.now());
+
         respuesta.setStatus(estado.value());
-        respuesta.setCharacterEncoding(StandardCharsets.UTF_8.name());
         respuesta.setContentType("application/problem+json");
-        String instancia = peticion.getRequestURI().replace("\\", "\\\\").replace("\"", "\\\"");
-        respuesta.getWriter().write("""
-                {"type":"about:blank","title":"%s","status":%d,"detail":"%s","instance":"%s","timestamp":"%s"}"""
-                .formatted(titulo, estado.value(), detalle, instancia, LocalDateTime.now()));
+        MAPPER.writeValue(respuesta.getOutputStream(), problema);
     }
 }
