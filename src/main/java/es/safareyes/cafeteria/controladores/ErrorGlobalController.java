@@ -30,10 +30,9 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-/**
- * Todas las respuestas de error salen como ProblemDetail y sin detalles internos
- * (trazas, nombres de clases Java, consultas JPQL...).
- */
+
+ //Todas las respuestas de error salen como ProblemDetail y sin detalles internos
+
 @RestControllerAdvice
 @Slf4j
 public class ErrorGlobalController {
@@ -155,7 +154,7 @@ public class ErrorGlobalController {
         return construir(HttpStatus.INTERNAL_SERVER_ERROR, "Error interno",
                 "Se ha producido un error inesperado en el servidor");
     }
-
+    //Control del mensaje de error, lanza un ProblemDetail con el mensaje de error personalizado.
     private static String campo(JacksonException e) {
         return e.getPath().stream()
                 .map(ref -> ref.getPropertyName() != null ? ref.getPropertyName() : "[" + ref.getIndex() + "]")

@@ -1,6 +1,7 @@
 package es.safareyes.cafeteria.controladores;
 
 import es.safareyes.cafeteria.dtos.DisponibilidadRequestDto;
+import es.safareyes.cafeteria.dtos.ProductoCartaVista;
 import es.safareyes.cafeteria.dtos.ProductoRequestDto;
 import es.safareyes.cafeteria.dtos.ProductoResponseDto;
 import jakarta.validation.Valid;
@@ -24,7 +25,7 @@ public class ProductoController {
     private ProductoService productoService;
 
     @GetMapping
-    public Page<ProductoResponseDto> carta(
+    public Page<ProductoCartaVista> carta(
             @RequestParam(required = false) UUID categoriaId,
             @RequestParam(required = false) String nombre,
             @RequestParam(required = false) BigDecimal precioMaximo,

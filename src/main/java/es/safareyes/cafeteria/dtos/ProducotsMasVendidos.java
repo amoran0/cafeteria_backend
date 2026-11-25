@@ -3,10 +3,16 @@ package es.safareyes.cafeteria.dtos;
 import java.math.BigDecimal;
 import java.util.UUID;
 
-public record ProducotsMasVendidos(
-        UUID productoId,
-        String nombre,
-        Long unidadesVendidas,
-        BigDecimal totalVendido
-) {
+/**
+ * Fila del ranking de productos más vendidos.
+ */
+public interface ProducotsMasVendidos {
+
+    UUID getProductoId();
+
+    String getNombre();
+
+    Long getUnidadesVendidas();
+
+    BigDecimal getTotalVendido();
 }

@@ -1,7 +1,7 @@
 package es.safareyes.cafeteria.servicios;
 
 import es.safareyes.cafeteria.conversores.UsuarioMapper;
-import es.safareyes.cafeteria.dtos.LoginDTO;
+import es.safareyes.cafeteria.dtos.LoginDto;
 import es.safareyes.cafeteria.dtos.LoginResponse;
 import es.safareyes.cafeteria.dtos.UsuarioDTO;
 import es.safareyes.cafeteria.excepciones.CredencialesIncorrectas;
@@ -62,7 +62,7 @@ public class UsuarioService implements UserDetailsService {
         clienteRepositorio.save(ficha);
     }
 
-    public LoginResponse login(LoginDTO dto) {
+    public LoginResponse login(LoginDto dto) {
         // el mismo mensaje en los dos casos para no revelar qué emails existen
         Usuario usuario = repository.findByMailIgnoreCase(dto.email())
                 .orElseThrow(() -> new CredencialesIncorrectas("Credenciales incorrectas"));

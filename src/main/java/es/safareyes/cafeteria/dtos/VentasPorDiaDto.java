@@ -2,7 +2,7 @@ package es.safareyes.cafeteria.dtos;
 
 import java.math.BigDecimal;
 
-public record VentasPorDia(
+public record VentasPorDiaDto(
         Long numeroPedidos,
         BigDecimal total,
         BigDecimal base,

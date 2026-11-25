@@ -200,7 +200,22 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('Status 200', () => pm.response.to.have.status(200));",
-                  "pm.test('Máximo 3 elementos', () => pm.expect(pm.response.json().content.length).to.be.at.most(3));"
+                  "const j = pm.response.json();",
+                  "pm.test('Máximo 3 elementos', () => pm.expect(j.content.length).to.be.at.most(3));",
+                  "pm.test('Datos de paginación', () => {",
+                  "  pm.expect(j.page.size).to.eql(3);",
+                  "  pm.expect(j.page.number).to.eql(0);",
+                  "  pm.expect(j.page.totalElements).to.be.above(0);",
+                  "});",
+                  "pm.test('Ordenada por precio ascendente', () => {",
+                  "  for (let i = 1; i < j.content.length; i++) pm.expect(j.content[i-1].precioVenta).to.be.at.most(j.content[i].precioVenta);",
+                  "});",
+                  "pm.test('Formato de la proyección ProductoCartaView (Q5)', () => {",
+                  "  j.content.forEach(p => {",
+                  "    pm.expect(p).to.have.all.keys('idProducto', 'nombre', 'descripcion', 'precioVenta', 'disponible', 'categoria');",
+                  "    pm.expect(p.categoria).to.have.all.keys('idCategoria', 'nombre');",
+                  "  });",
+                  "});"
                 ]
               }
             }

@@ -4,7 +4,6 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 
-import es.safareyes.cafeteria.dtos.CategoriaNombrePrecioDisponibilidad;
 import es.safareyes.cafeteria.dtos.ProducotsMasVendidos;
 import es.safareyes.cafeteria.dtos.ProductoPorAlergeno;
 import org.springframework.data.domain.Page;
@@ -17,7 +16,6 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
-import es.safareyes.cafeteria.modelos.EstadoPedido;
 import es.safareyes.cafeteria.modelos.Producto;
 import org.springframework.data.domain.Pageable;
 
@@ -41,52 +39,12 @@ public interface IProductoRepositorio extends JpaRepository<Producto, UUID>, Jpa
     @EntityGraph(attributePaths = {"categoria", "alergenos"})
     java.util.Optional<Producto> findById(UUID id);
 
-    // ✅ Renombrado a mayúscula/minuscula exacta que pide el test
     @Query("""
         SELECT new es.safareyes.cafeteria.dtos.ProductoPorAlergeno(p.nombre, a.nombre)
         FROM Producto p
         LEFT JOIN p.alergenos a
     """)
     List<ProductoPorAlergeno> findNombreYNombreAlergenosPorId();
-
-    // ✅ Nombre de método exacto que busca la línea 67 del test
-    @Query("""
-        SELECT DISTINCT new es.safareyes.cafeteria.dtos.CategoriaNombrePrecioDisponibilidad(
-            p.idProducto,
-            p.nombre,
-            p.precioVenta,
-            p.disponible
-        )
-        FROM Producto p
-    """)
-    List<CategoriaNombrePrecioDisponibilidad> CategoriaNombrePrecioDisponibilidad();
-
-    // Método parametrizado para busquedas con filtro
-    @Query("""
-        SELECT DISTINCT new es.safareyes.cafeteria.dtos.CategoriaNombrePrecioDisponibilidad(
-            p.idProducto,
-            p.nombre,
-            p.precioVenta,
-            p.disponible
-        )
-        FROM Producto p
-        WHERE p.categoria.idCategoria = :categoriaId
-          AND LOWER(p.nombre) LIKE LOWER(CONCAT('%', :nombre, '%'))
-          AND p.precioVenta <= :precioMaximo
-          AND p.disponible = :disponible
-          AND NOT EXISTS (
-              SELECT 1 
-              FROM p.alergenos a 
-              WHERE a.idAlergeno = :alergenoId
-          )
-    """)
-    List<CategoriaNombrePrecioDisponibilidad> buscarPorCategoriaNombrePrecioDisponibilidadSinAlergeno(
-            @Param("categoriaId") UUID categoriaId,
-            @Param("nombre") String nombre,
-            @Param("precioMaximo") Double precioMaximo,
-            @Param("disponible") Boolean disponible,
-            @Param("alergenoId") UUID alergenoId
-    );
 
     /**
      * RF-03 (Q4): agota o repone de golpe todos los productos de una categoría.
@@ -98,19 +56,26 @@ public interface IProductoRepositorio extends JpaRepository<Producto, UUID>, Jpa
     int cambiarDisponibilidadCategoria(@Param("categoriaId") UUID categoriaId,
                                        @Param("disponible") Boolean disponible);
 
-    /** RN-10: ranking de productos de pedidos en el estado indicado (ENTREGADO) */
-    @Query("""
-        SELECT new es.safareyes.cafeteria.dtos.ProducotsMasVendidos(
-            l.producto.idProducto, l.producto.nombre, SUM(l.cantidad), SUM(l.precioUnitario * l.cantidad))
-        FROM LineaPedido l
-        WHERE l.pedido.estado = :estado AND l.pedido.fecha >= :inicio AND l.pedido.fecha < :fin
-        GROUP BY l.producto.idProducto, l.producto.nombre
-        ORDER BY SUM(l.cantidad) DESC, l.producto.nombre
-    """)
-    List<ProducotsMasVendidos> obtenerProductosTop(
-            @Param("estado") EstadoPedido estado,
-            @Param("inicio") LocalDateTime inicio,
-            @Param("fin") LocalDateTime fin,
-            Pageable limite
-    );
+    /**
+     * RF-07 / RN-10 (Q3): ranking de productos más vendidos con SQL nativo y LIMIT.
+     * Solo cuentan los pedidos ENTREGADO. Los alias van entre comillas para que PostgreSQL respete
+     * las mayúsculas.
+     */
+    @Query(value = """
+        SELECT pr.id_producto                       AS "productoId",
+               pr.nombre                            AS "nombre",
+               SUM(l.cantidad)                      AS "unidadesVendidas",
+               SUM(l.cantidad * l.precio_unitario)  AS "totalVendido"
+        FROM pedido_producto l
+        JOIN pedido p    ON p.id_pedido = l.id_pedido
+        JOIN producto pr ON pr.id_producto = l.id_producto
+        WHERE p.estado = 'ENTREGADO'
+          AND p.fecha >= :inicio AND p.fecha < :fin
+        GROUP BY pr.id_producto, pr.nombre
+        ORDER BY SUM(l.cantidad) DESC, pr.nombre
+        LIMIT :limite
+    """, nativeQuery = true)
+    List<ProducotsMasVendidos> obtenerProductosTop(@Param("inicio") LocalDateTime inicio,
+                                                   @Param("fin") LocalDateTime fin,
+                                                   @Param("limite") int limite);
 }

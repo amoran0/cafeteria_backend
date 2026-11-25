@@ -1,7 +1,7 @@
 package es.safareyes.cafeteria.controladores;
 
 import es.safareyes.cafeteria.dtos.ProducotsMasVendidos;
-import es.safareyes.cafeteria.dtos.VentasPorDia;
+import es.safareyes.cafeteria.dtos.VentasPorDiaDto;
 import lombok.AllArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
@@ -18,7 +18,7 @@ public class InformeController {
 
     @GetMapping("/ventas-dia")
     @PreAuthorize("hasRole('ADMIN')")
-    public VentasPorDia ventasDia(@RequestParam LocalDate fecha) {
+    public VentasPorDiaDto ventasDia(@RequestParam LocalDate fecha) {
         return informeService.ventasDia(fecha);
     }
 

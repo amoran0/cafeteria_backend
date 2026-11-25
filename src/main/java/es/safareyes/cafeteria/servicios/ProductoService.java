@@ -1,5 +1,6 @@
 package es.safareyes.cafeteria.servicios;
 
+import es.safareyes.cafeteria.dtos.ProductoCartaVista;
 import es.safareyes.cafeteria.dtos.ProductoRequestDto;
 import es.safareyes.cafeteria.dtos.ProductoResponseDto;
 import es.safareyes.cafeteria.excepciones.ElementoNoEncontrado;
@@ -65,19 +66,20 @@ public class ProductoService {
     }
 
     /**
-     * RF-02: carta con filtros combinables (Specification, Q7), paginada y ordenada en la BD.
+     * RF-02: carta con filtros combinables (Specification, Q7), paginada y ordenada en la BD,
+     * devuelta con la proyección ProductoCartaView (Q5).
      * Sin ?sort= se ordena por nombre; con ?sort=precioVenta,asc (u otro campo) se respeta el orden pedido.
      */
     @Transactional(readOnly = true)
-    public Page<ProductoResponseDto> listarCarta(UUID categoriaId, String nombre, BigDecimal precioMaximo,
-                                      Boolean disponible, UUID sinAlergenoId, Pageable pageable) {
+    public Page<ProductoCartaVista> listarCarta(UUID categoriaId, String nombre, BigDecimal precioMaximo,
+                                                Boolean disponible, UUID sinAlergenoId, Pageable pageable) {
         Pageable pagina = pageable.getSort().isSorted()
                 ? pageable
                 : PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(),
                         Sort.by(Sort.Order.asc("nombre").ignoreCase()));
-        return productoRepositorio
-                .findAll(ProductoSpecifications.carta(categoriaId, nombre, precioMaximo, disponible, sinAlergenoId), pagina)
-                .map(mapper::toDto);
+        return productoRepositorio.findBy(
+                ProductoSpecifications.carta(categoriaId, nombre, precioMaximo, disponible, sinAlergenoId),
+                consulta -> consulta.as(ProductoCartaVista.class).page(pagina));
     }
 
     private Producto buscar(UUID id) {

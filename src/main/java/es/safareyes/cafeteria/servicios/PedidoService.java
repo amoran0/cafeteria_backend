@@ -42,7 +42,7 @@ public class PedidoService {
     public PedidoResponseDto crear(PedidoRequestDto dto, Usuario usuario) {
         Cliente cliente = clienteDelPedido(dto.clienteId(), usuario);
 
-        // RN-04: cada línea recibida debe tener entre 1 y 20 unidades ANTES de agrupar,
+        // RN-04: cada línea recibida debe tener entre 1 y 20 unidades antes de agrupar,
         // para que una cantidad negativa o 0 no se "compense" con otra línea del mismo producto
         for (int i = 0; i < dto.lineas().size(); i++) {
             int cantidad = dto.lineas().get(i).cantidad();
@@ -62,7 +62,7 @@ public class PedidoService {
 
         Pedido pedido = new Pedido();
         pedido.setCliente(cliente);
-        pedido.setFecha(LocalDateTime.now());   // el estado ya nace PENDIENTE
+        pedido.setFecha(LocalDateTime.now());   // el estado se crea como PENDIENTE
 
         BigDecimal subtotal = BigDecimal.ZERO;
         for (Map.Entry<UUID, Integer> entrada : cantidades.entrySet()) {
@@ -87,7 +87,7 @@ public class PedidoService {
         BigDecimal descuento = BigDecimal.ZERO;
         Cupon cupon = null;
         if (dto.codigoCupon() != null && !dto.codigoCupon().isBlank()) {
-            // sin cliente (pedido de barra) no hay email: un cupón personal no será válido
+            // sin cliente no hay email: un cupón personal no será válido
             cupon = cuponService.buscarValido(dto.codigoCupon(), subtotal, cliente == null ? null : cliente.getMail());
             descuento = cuponService.calcularDescuento(cupon, subtotal);
         }
@@ -143,7 +143,7 @@ public class PedidoService {
             }
             clienteId = propio;
         }
-        // sin filtro = todos los estados y un rango de fechas amplio (Postgres no admite parámetros nulos aquí)
+        // sin filtro = todos los estados y un rango de fechas amplio
         List<EstadoPedido> estados = estado == null ? List.of(EstadoPedido.values()) : List.of(estado);
         LocalDateTime inicio = desde == null ? LocalDateTime.of(2000, 1, 1, 0, 0) : desde;
         LocalDateTime fin = hasta == null ? LocalDateTime.of(3000, 1, 1, 0, 0) : hasta;

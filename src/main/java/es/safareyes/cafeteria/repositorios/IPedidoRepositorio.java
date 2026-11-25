@@ -46,9 +46,6 @@ public interface IPedidoRepositorio extends JpaRepository<Pedido, UUID> {
                                       @Param("hasta") LocalDateTime hasta,
                                       Pageable pageable);
 
-    @Query("SELECT p FROM Pedido p")
-    List<Pedido> obtenerTodosPedidos();
-
     List<Pedido> findByCliente_IdClienteAndEstadoAndFechaBetween(
             UUID clienteId,
             EstadoPedido estado,

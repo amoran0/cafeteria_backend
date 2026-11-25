@@ -1,11 +1,10 @@
 package es.safareyes.cafeteria.servicios;
 
 import es.safareyes.cafeteria.dtos.ProducotsMasVendidos;
-import es.safareyes.cafeteria.dtos.VentasPorDia;
+import es.safareyes.cafeteria.dtos.VentasPorDiaDto;
 import lombok.AllArgsConstructor;
 import es.safareyes.cafeteria.modelos.EstadoPedido;
 import es.safareyes.cafeteria.modelos.Pedido;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import es.safareyes.cafeteria.repositorios.IPedidoRepositorio;
@@ -24,10 +23,10 @@ public class InformeService {
     private IProductoRepositorio productoRepositorio;
 
     @Transactional(readOnly = true)
-    public VentasPorDia ventasDia(LocalDate fecha) {
+    public VentasPorDiaDto ventasDia(LocalDate fecha) {
         List<Pedido> pedidos = pedidoRepositorio.findByEstadoAndFechaGreaterThanEqualAndFechaLessThan(
                 EstadoPedido.ENTREGADO, fecha.atStartOfDay(), fecha.plusDays(1).atStartOfDay());
-        return new VentasPorDia(
+        return new VentasPorDiaDto(
                 (long) pedidos.size(),
                 sumar(pedidos, Pedido::getTotal),
                 sumar(pedidos, Pedido::getBaseImponible),
@@ -41,8 +40,7 @@ public class InformeService {
         if (hasta.isBefore(desde)) {
             throw new IllegalArgumentException("La fecha 'hasta' no puede ser anterior a la fecha 'desde'");
         }
-        return productoRepositorio.obtenerProductosTop(EstadoPedido.ENTREGADO,
-                desde.atStartOfDay(), hasta.plusDays(1).atStartOfDay(), PageRequest.of(0, limite));
+        return productoRepositorio.obtenerProductosTop(desde.atStartOfDay(), hasta.plusDays(1).atStartOfDay(), limite);
     }
 
     private BigDecimal sumar(List<Pedido> pedidos, Function<Pedido, BigDecimal> importe) {

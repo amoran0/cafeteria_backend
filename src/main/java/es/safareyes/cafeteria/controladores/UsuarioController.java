@@ -1,6 +1,6 @@
 package es.safareyes.cafeteria.controladores;
 
-import es.safareyes.cafeteria.dtos.LoginDTO;
+import es.safareyes.cafeteria.dtos.LoginDto;
 import es.safareyes.cafeteria.dtos.LoginResponse;
 import es.safareyes.cafeteria.dtos.UsuarioDTO;
 import es.safareyes.cafeteria.servicios.UsuarioService;
@@ -21,7 +21,7 @@ public class UsuarioController {
     }
 
     @PostMapping("/login")
-    public LoginResponse login(@Valid @RequestBody LoginDTO dto) {
+    public LoginResponse login(@Valid @RequestBody LoginDto dto) {
         return service.login(dto);
     }
 }
