@@ -9,9 +9,7 @@ import es.safareyes.cafeteria.conversores.ProductoMapper;
 import es.safareyes.cafeteria.modelos.Alergeno;
 import es.safareyes.cafeteria.modelos.Producto;
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import es.safareyes.cafeteria.repositorios.IAlergenoRepositorio;
@@ -68,18 +66,14 @@ public class ProductoService {
     /**
      * RF-02: carta con filtros combinables (Specification, Q7), paginada y ordenada en la BD,
      * devuelta con la proyección ProductoCartaView (Q5).
-     * Sin ?sort= se ordena por nombre; con ?sort=precioVenta,asc (u otro campo) se respeta el orden pedido.
+     * El orden por defecto (nombre) lo pone @PageableDefault en el controlador.
      */
     @Transactional(readOnly = true)
     public Page<ProductoCartaVista> listarCarta(UUID categoriaId, String nombre, BigDecimal precioMaximo,
                                                 Boolean disponible, UUID sinAlergenoId, Pageable pageable) {
-        Pageable pagina = pageable.getSort().isSorted()
-                ? pageable
-                : PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(),
-                        Sort.by(Sort.Order.asc("nombre").ignoreCase()));
         return productoRepositorio.findBy(
                 ProductoSpecifications.carta(categoriaId, nombre, precioMaximo, disponible, sinAlergenoId),
-                consulta -> consulta.as(ProductoCartaVista.class).page(pagina));
+                consulta -> consulta.as(ProductoCartaVista.class).page(pageable));
     }
 
     private Producto buscar(UUID id) {
@@ -110,10 +104,8 @@ public class ProductoService {
         }
         List<UUID> ids = dto.alergenosIds() == null ? List.of() : dto.alergenosIds();
         List<Alergeno> alergenos = alergenoRepositorio.findAllById(ids);
-        if (alergenos.size() != new HashSet<>(ids).size()) {
-            List<UUID> encontrados = alergenos.stream().map(Alergeno::getIdAlergeno).toList();
-            List<UUID> noExisten = ids.stream().filter(i -> !encontrados.contains(i)).distinct().toList();
-            throw new ElementoNoEncontrado("No existen los alérgenos con id " + noExisten);
+        if (alergenos.size() != new HashSet<>(ids).size()) {   // HashSet: un id repetido cuenta una sola vez
+            throw new ElementoNoEncontrado("Uno o varios alérgenos indicados no existen");
         }
         producto.setAlergenos(alergenos);
     }

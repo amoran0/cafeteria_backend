@@ -45,17 +45,17 @@ public class SecurityConfig {
                         // sin esto, un 403 se reenvía a /error como anónimo y acaba saliendo como 401
                         .requestMatchers("/error").permitAll()
 
-                        // ===== PÚBLICAS (sin token) =====
+                        //PÚBLICAS (sin token)
                         .requestMatchers(HttpMethod.POST, "/api/v1/auth/registro", "/api/v1/auth/login").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/categorias").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/productos", "/api/v1/productos/*").permitAll()
 
-                        // ===== ADMIN o BARISTA: agotar/reponer y hacer avanzar los pedidos =====
+                        // ADMIN o BARISTA: agotar/reponer y hacer avanzar los pedidos
                         .requestMatchers(HttpMethod.PATCH, "/api/v1/categorias/*/disponibilidad").hasAnyRole("ADMIN", "BARISTA")
                         .requestMatchers(HttpMethod.PATCH, "/api/v1/productos/*/disponibilidad").hasAnyRole("ADMIN", "BARISTA")
                         .requestMatchers(HttpMethod.PATCH, "/api/v1/pedidos/*/estado").hasAnyRole("ADMIN", "BARISTA")
 
-                        // ===== SOLO ADMIN =====
+                        //SOLO ADMIN
                         .requestMatchers(HttpMethod.POST, "/api/v1/productos").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.PUT, "/api/v1/productos/*").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.DELETE, "/api/v1/productos/*").hasRole("ADMIN")
@@ -63,10 +63,10 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/v1/informes/ventas-dia").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.GET, "/api/v1/informes/productos-top").hasRole("ADMIN")
 
-                        // ===== BARISTA o CLIENTE: crear pedidos (en barra o desde la app) =====
+                        //BARISTA o CLIENTE: crear pedidos (en barra o desde la app) =====
                         .requestMatchers(HttpMethod.POST, "/api/v1/pedidos").hasAnyRole("BARISTA", "CLIENTE")
 
-                        // ===== CUALQUIER USUARIO LOGUEADO =====
+                        //CUALQUIER USUARIO LOGUEADO
                         .requestMatchers(HttpMethod.POST, "/api/v1/cupones/validar").authenticated()
                         // un cliente solo ve sus pedidos: lo controla PedidoService
                         .requestMatchers(HttpMethod.GET, "/api/v1/pedidos", "/api/v1/pedidos/*").authenticated()
