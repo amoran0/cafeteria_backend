@@ -26,6 +26,7 @@ cp .env
 | `DB_USER` / `DB_PASSWORD` | Credenciales de la base de datos |
 | `DB_SCHEMA` | Esquema donde están las tablas (`cafeteria`) |
 | `JWT_SECRETO` | Secreto para firmar los tokens; al menos 32 caracteres |
+| `SAFAREYES_COFFEESTATION_API_KEY` | Clave que las otras API deben enviar en la cabecera `X-API-KEY` para usar `/api/v1/integracion/**` (sin ella, 401) |
 
 El `.env` no se sube a git. La aplicación lo lee al arrancar (`spring.config.import` en `application.properties`).
 
@@ -107,6 +108,33 @@ Los errores se devuelven en formato `ProblemDetail`. Los códigos son:
 - **409**: el recurso está duplicado.
 - **422**: se ha incumplido una regla de negocio.
 
+## Consultas (Q1–Q8)
+
+17 consultas propias, todas usadas desde algún servicio.
+
+| Formato | Consulta | Repositorio | Endpoint que la usa |
+|---|---|---|---|
+| Q1 Derivada | `findByCodigoIgnoreCase` | `ICuponRepositorio` | 9 crear pedido (cupón), 14 validar cupón |
+| Q1 Derivada | `existsByCodigoIgnoreCase` | `ICuponRepositorio` | 13 crear cupón (código repetido → 409) |
+| Q1 Derivada | `findByUsuario_IdUsuario` | `IClienteRepositorio` | 9, 10, 11 (pedidos propios del CLIENTE) |
+| Q1 Derivada | `findByMailIgnoreCase` | `IUsuarioRepositorio` | login y filtro JWT |
+| Q1 Derivada | `existsByMailIgnoreCase` | `IUsuarioRepositorio` | registro (email repetido → 409) |
+| Q1 Derivada | `countByFechaGreaterThanEqual` | `IPedidoRepositorio` | 9 crear pedido (número de turno, RN-09) |
+| Q1 Derivada | `countByCupon_IdCuponAndEstadoNot` | `IPedidoRepositorio` | 9 y 14 (usos del cupón sin contar cancelados, RN-06) |
+| Q1 Derivada | `findByIdProductoAndActivaTrue` | `IProductoRepositorio` | 2 detalle, 5 disponibilidad, 6 baja (RN-01) |
+| Q2 JPQL | `buscarCategoriasProductosActivos` (LEFT JOIN + COUNT + GROUP BY) | `ICategoriaRepositorio` | 7 categorías |
+| Q2 JPQL | `buscarPedidos` | `IPedidoRepositorio` | 11 listado de pedidos |
+| Q2 JPQL | `buscarPedidosCliente` | `IPedidoRepositorio` | 11 listado de pedidos de un cliente |
+| Q3 Nativa | `obtenerProductosTop` (DATE_TRUNC + LIMIT) | `IProductoRepositorio` | 16 productos más vendidos |
+| Q3 Nativa | `obtenerVentasDia` (DATE_TRUNC + COALESCE) | `IPedidoRepositorio` | 15 ventas del día |
+| Q4 Modificación | `cambiarDisponibilidadCategoria` (`@Modifying` UPDATE masivo) | `IProductoRepositorio` | 8 agotar/reponer categoría |
+| Q5 Proyección | interfaz `ProductoCartaVista` (con `findBy(...).as(...)`) | `IProductoRepositorio` | 1 carta |
+| Q5 Proyección | record `CategoriasActivos` con `SELECT new` | `ICategoriaRepositorio` | 7 categorías |
+| Q6 Paginación | `Pageable` → `Page<…>` en `buscarPedidos`, `buscarPedidosCliente` y la carta | `IPedidoRepositorio`, `IProductoRepositorio` | 1 carta, 11 pedidos |
+| Q7 Specification | `findBy(ProductoSpecifications.carta(...))` | `IProductoRepositorio` | 1 carta con filtros combinables |
+| Q8 N+1 | `findById` con `@EntityGraph` (líneas, productos y cupón) | `IPedidoRepositorio` | 10 detalle del pedido |
+| Q8 N+1 | `findById` con `@EntityGraph` (categoría y alérgenos) | `IProductoRepositorio` | 4 modificar producto |
+
 ## Postman
 
 La colección `postman/cafeteria.postman_collection.json` tiene peticiones de prueba para todos los endpoints, con tests automáticos. Depende de los datos de `db/cafeteria.sql`.
@@ -119,10 +147,13 @@ src/main/java/es/safareyes/cafeteria/
 ├── servicios/       reglas de negocio
 ├── repositorios/    consultas JPA y Specifications de la carta
 ├── modelos/         entidades y enums
-├── dtos/            DTOs de entrada/salida y proyecciones
+├── dtos/
+│   ├── request/     DTOs de entrada (con sus validaciones)
+│   └── response/    DTOs de salida y proyecciones
+├── validaciones/    validador propio @DniValido
 ├── conversores/     mappers MapStruct
 ├── excepciones/     excepciones propias
-├── security/        configuración de Spring Security y JWT
+├── security/        Spring Security: JWT y filtro X-API-KEY de /api/v1/integracion/**
 └── integracion/     cliente de FitZone
 db/cafeteria.sql     esquema y datos de ejemplo
 ```

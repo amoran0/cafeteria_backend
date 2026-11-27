@@ -1,6 +1,6 @@
 package es.safareyes.cafeteria.conversores;
 
-import es.safareyes.cafeteria.dtos.UsuarioDTO;
+import es.safareyes.cafeteria.dtos.request.UsuarioDTO;
 import es.safareyes.cafeteria.modelos.Usuario;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;

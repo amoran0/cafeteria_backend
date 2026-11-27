@@ -178,6 +178,43 @@
               }
             }
           ]
+        },
+        {
+          "name": "integración sin cabecera X-API-KEY → 401",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/integracion/cupones",
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 401', () => pm.response.to.have.status(401));",
+                  "pm.test('Error en formato ProblemDetail', () => pm.expect(pm.response.json()).to.include.keys('title', 'status', 'detail', 'instance'));"
+                ]
+              }
+            }
+          ]
         }
       ]
     },
@@ -508,6 +545,45 @@
           ]
         },
         {
+          "name": "[4] modificar solo el precio (el resto se conserva)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/productos/{{productoId}}",
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"precioVenta\": 2.1\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Cambia el precio y conserva el nombre', () => {",
+                  "  const j = pm.response.json();",
+                  "  pm.expect(Number(j.precioVenta)).to.eql(2.1);",
+                  "  pm.expect(j.nombre).to.eql('Café Cortado XL (Postman)');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
           "name": "[4] producto inexistente → 404",
           "request": {
             "method": "PUT",
@@ -548,7 +624,7 @@
           ]
         },
         {
-          "name": "[4] sin precioVenta → 400",
+          "name": "[4] precioVenta negativo → 400",
           "request": {
             "method": "PUT",
             "header": [
@@ -561,7 +637,7 @@
             "description": "",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"categoriaId\": \"{{categoriaClasicos}}\",\n  \"nombre\": \"Café Cortado (Postman)\",\n  \"descripcion\": \"Espresso con un toque de leche\",\n  \"precioBase\": 1.2,\n  \"disponible\": true,\n  \"activa\": true,\n  \"iva\": 10,\n  \"alergenosIds\": [\n    \"{{alergenoLacteos}}\"\n  ]\n}",
+              "raw": "{\n  \"precioVenta\": -1\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -576,12 +652,7 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('Status 400', () => pm.response.to.have.status(400));",
-                  "pm.test('Error con formato ProblemDetail', () => {",
-                  "  const j = pm.response.json();",
-                  "  pm.expect(j).to.have.property('status');",
-                  "  pm.expect(j).to.have.property('detail');",
-                  "  pm.expect(j).to.not.have.property('trace');",
-                  "});"
+                  "pm.test('Indica el campo erróneo', () => pm.expect(pm.response.json().errores).to.have.property('precioVenta'));"
                 ]
               }
             }
@@ -1295,6 +1366,51 @@
                   "  pm.expect(j).to.have.property('detail');",
                   "  pm.expect(j).to.not.have.property('trace');",
                   "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "[9] dniSocio con letra incorrecta → 400 (@DniValido)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/pedidos",
+            "description": "2 cafés con leche (1.80) + 1 croissant (1.90) = 5.50 €. CAFEMATIN resta 1 € → 4.50.\nRN-05: base = 4.50 / 1.10 = 4.09, IVA = 0.41. Guarda el id en {{pedidoId}}.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"lineas\": [\n    {\n      \"productoId\": \"{{productoEspresso}}\",\n      \"cantidad\": 1\n    }\n  ],\n  \"dniSocio\": \"12345678A\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenBarista}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 400', () => pm.response.to.have.status(400));",
+                  "pm.test('Indica que falla el DNI', () => pm.expect(pm.response.json().errores).to.have.property('dniSocio'));"
                 ]
               }
             }

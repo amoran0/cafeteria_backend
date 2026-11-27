@@ -1,7 +1,8 @@
 package es.safareyes.cafeteria.conversores;
 
-import es.safareyes.cafeteria.dtos.ProductoRequestDto;
-import es.safareyes.cafeteria.dtos.ProductoResponseDto;
+import es.safareyes.cafeteria.dtos.request.ProductoActualizacionDto;
+import es.safareyes.cafeteria.dtos.request.ProductoRequestDto;
+import es.safareyes.cafeteria.dtos.response.ProductoResponseDto;
 import es.safareyes.cafeteria.modelos.Alergeno;
 import es.safareyes.cafeteria.modelos.Producto;
 import org.mapstruct.Mapper;
@@ -25,4 +26,10 @@ public interface ProductoMapper {
     @Mapping(target = "categoria", ignore = true)
     @Mapping(target = "alergenos", ignore = true)
     void actualizar(@MappingTarget Producto producto, ProductoRequestDto dto);
+
+    // PUT: solo copia los campos que llegan; los null se ignoran (nullValuePropertyMappingStrategy)
+    @Mapping(target = "idProducto", ignore = true)
+    @Mapping(target = "categoria", ignore = true)
+    @Mapping(target = "alergenos", ignore = true)
+    void actualizar(@MappingTarget Producto producto, ProductoActualizacionDto dto);
 }

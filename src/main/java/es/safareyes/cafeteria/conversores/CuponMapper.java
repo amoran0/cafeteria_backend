@@ -1,7 +1,7 @@
 package es.safareyes.cafeteria.conversores;
 
-import es.safareyes.cafeteria.dtos.CuponRequestDto;
-import es.safareyes.cafeteria.dtos.CuponResponseDto;
+import es.safareyes.cafeteria.dtos.request.CuponRequestDto;
+import es.safareyes.cafeteria.dtos.response.CuponResponseDto;
 import es.safareyes.cafeteria.modelos.Cupon;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;

@@ -1,11 +1,11 @@
 package es.safareyes.cafeteria.repositorios;
 
-import java.time.LocalDateTime;
+import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
-import es.safareyes.cafeteria.dtos.ProducotsMasVendidos;
-import es.safareyes.cafeteria.dtos.ProductoPorAlergeno;
+import es.safareyes.cafeteria.dtos.response.ProducotsMasVendidos;
 import org.springframework.data.domain.Page;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -37,14 +37,11 @@ public interface IProductoRepositorio extends JpaRepository<Producto, UUID>, Jpa
 
     @Override
     @EntityGraph(attributePaths = {"categoria", "alergenos"})
-    java.util.Optional<Producto> findById(UUID id);
+    Optional<Producto> findById(UUID id);
 
-    @Query("""
-        SELECT new es.safareyes.cafeteria.dtos.ProductoPorAlergeno(p.nombre, a.nombre)
-        FROM Producto p
-        LEFT JOIN p.alergenos a
-    """)
-    List<ProductoPorAlergeno> findNombreYNombreAlergenosPorId();
+    /** RN-01: un producto dado de baja no tiene detalle ni se puede modificar su disponibilidad o borrar */
+    @EntityGraph(attributePaths = {"categoria", "alergenos"})
+    Optional<Producto> findByIdProductoAndActivaTrue(UUID idProducto);
 
     /**
      * RF-03 (Q4): agota o repone de golpe todos los productos de una categoría.
@@ -58,8 +55,9 @@ public interface IProductoRepositorio extends JpaRepository<Producto, UUID>, Jpa
 
     /**
      * RF-07 / RN-10 (Q3): ranking de productos más vendidos con SQL nativo y LIMIT.
-     * Solo cuentan los pedidos ENTREGADO. Los alias van entre comillas para que PostgreSQL respete
-     * las mayúsculas.
+     * Solo cuentan los pedidos ENTREGADO. DATE_TRUNC('day', fecha) quita la hora, así que BETWEEN
+     * incluye completos el día "desde" y el día "hasta". Los alias van entre comillas para que
+     * PostgreSQL respete las mayúsculas.
      */
     @Query(value = """
         SELECT pr.id_producto                       AS "productoId",
@@ -70,12 +68,12 @@ public interface IProductoRepositorio extends JpaRepository<Producto, UUID>, Jpa
         JOIN pedido p    ON p.id_pedido = l.id_pedido
         JOIN producto pr ON pr.id_producto = l.id_producto
         WHERE p.estado = 'ENTREGADO'
-          AND p.fecha >= :inicio AND p.fecha < :fin
+          AND DATE_TRUNC('day', p.fecha) BETWEEN :desde AND :hasta
         GROUP BY pr.id_producto, pr.nombre
         ORDER BY SUM(l.cantidad) DESC, pr.nombre
         LIMIT :limite
     """, nativeQuery = true)
-    List<ProducotsMasVendidos> obtenerProductosTop(@Param("inicio") LocalDateTime inicio,
-                                                   @Param("fin") LocalDateTime fin,
+    List<ProducotsMasVendidos> obtenerProductosTop(@Param("desde") LocalDate desde,
+                                                   @Param("hasta") LocalDate hasta,
                                                    @Param("limite") int limite);
 }

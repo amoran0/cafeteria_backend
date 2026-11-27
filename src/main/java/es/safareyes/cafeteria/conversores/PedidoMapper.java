@@ -1,6 +1,6 @@
 package es.safareyes.cafeteria.conversores;
 
-import es.safareyes.cafeteria.dtos.PedidoResponseDto;
+import es.safareyes.cafeteria.dtos.response.PedidoResponseDto;
 import es.safareyes.cafeteria.modelos.LineaPedido;
 import es.safareyes.cafeteria.modelos.Pedido;
 import org.mapstruct.Mapper;

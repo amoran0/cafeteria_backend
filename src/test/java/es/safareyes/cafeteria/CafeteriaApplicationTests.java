@@ -1,9 +1,9 @@
 package es.safareyes.cafeteria;
 
-import es.safareyes.cafeteria.dtos.CategoriasActivos;
-import es.safareyes.cafeteria.dtos.ProducotsMasVendidos;
-import es.safareyes.cafeteria.dtos.ProductoCartaVista;
-import es.safareyes.cafeteria.dtos.ProductoPorAlergeno;
+import es.safareyes.cafeteria.dtos.response.CategoriasActivos;
+import es.safareyes.cafeteria.dtos.response.ProducotsMasVendidos;
+import es.safareyes.cafeteria.dtos.response.ProductoCartaVista;
+import es.safareyes.cafeteria.dtos.response.VentasPorDiaDto;
 import es.safareyes.cafeteria.modelos.Cupon;
 import es.safareyes.cafeteria.modelos.EstadoPedido;
 import es.safareyes.cafeteria.modelos.Pedido;
@@ -26,6 +26,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -45,12 +46,14 @@ class CafeteriaApplicationTest {
     private static final UUID CAT_BOLLERIA = UUID.fromString("e0eebc99-9c0b-4ef8-bb6d-6bb9bd380a05");
     private static final UUID ALERGENO_GLUTEN = UUID.fromString("a1eebc99-9c0b-4ef8-bb6d-6bb9bd380a01");
     private static final UUID PRODUCTO_ESPRESSO = UUID.fromString("f0eebc99-9c0b-4ef8-bb6d-6bb9bd380a01");
+    private static final UUID PRODUCTO_TE_ROJO = UUID.fromString("f0eebc99-9c0b-4ef8-bb6d-6bb9bd380a31");
     private static final UUID PEDIDO_1 = UUID.fromString("b1eebc99-9c0b-4ef8-bb6d-6bb9bd380a01");
     private static final UUID CLIENTE_CARLOS = UUID.fromString("b0eebc99-9c0b-4ef8-bb6d-6bb9bd380a01");
     private static final UUID USUARIO_CARLOS = UUID.fromString("a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a14");
 
     private static final LocalDateTime DIA_4 = LocalDateTime.of(2026, 10, 4, 0, 0);
     private static final LocalDateTime DIA_5 = LocalDateTime.of(2026, 10, 5, 0, 0);
+    private static final LocalDate FECHA_4 = LocalDate.of(2026, 10, 4);
 
     @Autowired
     private IProductoRepositorio productoRepositorio;
@@ -70,7 +73,7 @@ class CafeteriaApplicationTest {
     @Autowired
     private IClienteRepositorio clienteRepositorio;
 
-    // ===================== CATEGORÍAS =====================
+    // CATEGORÍAS
 
     // GET /api/v1/categorias: cada categoría con su número de productos activos
     @Test
@@ -84,7 +87,7 @@ class CafeteriaApplicationTest {
                 .satisfies(c -> assertThat(c.cantidadProductosActivos()).isEqualTo(6L));
     }
 
-    // ===================== PRODUCTOS =====================
+    // PRODUCTOS
 
     // Q7 · GET /api/v1/productos sin filtros: solo los productos activos (RN-01)
     @Test
@@ -138,13 +141,11 @@ class CafeteriaApplicationTest {
         assertThat(producto.get().getAlergenos()).isEmpty();
     }
 
-    // Producto–alérgeno con LEFT JOIN: los productos sin alérgenos salen con alérgeno null
+    // Q1 · RN-01: solo se encuentra el producto si está activo (el té rojo está dado de baja en el script)
     @Test
-    void productosConSusAlergenos() {
-        List<ProductoPorAlergeno> filas = productoRepositorio.findNombreYNombreAlergenosPorId();
-
-        assertThat(filas).contains(new ProductoPorAlergeno("Café Espresso", null));
-        assertThat(filas).anyMatch(f -> "Gluten".equals(f.alergenoNombre()));
+    void obtenerProductoActivo() {
+        assertThat(productoRepositorio.findByIdProductoAndActivaTrue(PRODUCTO_ESPRESSO)).isPresent();
+        assertThat(productoRepositorio.findByIdProductoAndActivaTrue(PRODUCTO_TE_ROJO)).isEmpty();
     }
 
     // Q4 · PATCH /api/v1/categorias/{id}/disponibilidad: agota toda la categoría de una vez
@@ -157,20 +158,20 @@ class CafeteriaApplicationTest {
                 .isZero();
     }
 
-    // Q3 · GET /api/v1/informes/productos-top: consulta nativa con LIMIT, solo pedidos ENTREGADO
+    // Q3 · GET /api/v1/informes/productos-top: consulta nativa con DATE_TRUNC y LIMIT, solo pedidos ENTREGADO
     @Test
     void productosTop() {
-        List<ProducotsMasVendidos> top = productoRepositorio.obtenerProductosTop(DIA_4, DIA_5, 5);
+        List<ProducotsMasVendidos> top = productoRepositorio.obtenerProductosTop(FECHA_4, FECHA_4, 5);
 
         assertThat(top).hasSize(5);
         assertThat(top.getFirst().getNombre()).isEqualTo("Tostada de Aguacate y Huevo");
         assertThat(top.getFirst().getUnidadesVendidas()).isEqualTo(3L);
         assertThat(top.getFirst().getTotalVendido()).isEqualByComparingTo("14.70");
         assertThat(top).extracting(ProducotsMasVendidos::getUnidadesVendidas).isSortedAccordingTo((a, b) -> b.compareTo(a));
-        assertThat(productoRepositorio.obtenerProductosTop(DIA_4, DIA_5, 2)).hasSize(2);
+        assertThat(productoRepositorio.obtenerProductosTop(FECHA_4, FECHA_4, 2)).hasSize(2);
     }
 
-    // ===================== PEDIDOS =====================
+    // PEDIDOS
 
     // Q8 · GET /api/v1/pedidos/{id}: pedido con sus líneas y productos
     @Test
@@ -210,14 +211,6 @@ class CafeteriaApplicationTest {
         assertThat(pedidos.getContent().getFirst().getCliente().getIdCliente()).isEqualTo(CLIENTE_CARLOS);
     }
 
-    @Test
-    void pedidosClientePorEstadoYFechas() {
-        List<Pedido> pedidos = pedidoRepositorio.findByCliente_IdClienteAndEstadoAndFechaBetween(
-                CLIENTE_CARLOS, EstadoPedido.ENTREGADO, DIA_4, DIA_5);
-
-        assertThat(pedidos).hasSize(1).allMatch(p -> p.getEstado() == EstadoPedido.ENTREGADO);
-    }
-
     // RN-09: pedidos creados desde una fecha (el 04/10/2026 se crearon 10)
     @Test
     void contarPedidosDelDia() {
@@ -227,18 +220,22 @@ class CafeteriaApplicationTest {
         assertThat(desdeDia4 - desdeDia5).isEqualTo(10);
     }
 
-    // RN-10 · GET /api/v1/informes/ventas-dia: solo los ENTREGADO del día
+    // Q3 · RN-10 · GET /api/v1/informes/ventas-dia: nativa con DATE_TRUNC y COALESCE, solo los ENTREGADO del día
     @Test
     void ventasDia() {
-        List<Pedido> pedidos = pedidoRepositorio.findByEstadoAndFechaGreaterThanEqualAndFechaLessThan(
-                EstadoPedido.ENTREGADO, DIA_4, DIA_5);
+        VentasPorDiaDto ventas = pedidoRepositorio.obtenerVentasDia(FECHA_4);
 
-        BigDecimal total = pedidos.stream().map(Pedido::getTotal).reduce(BigDecimal.ZERO, BigDecimal::add);
-        assertThat(pedidos).hasSize(6);
-        assertThat(total).isEqualByComparingTo("42.68");
+        assertThat(ventas.getNumeroPedidos()).isEqualTo(6L);
+        assertThat(ventas.getTotal()).isEqualByComparingTo("42.68");
+        assertThat(ventas.getBase().add(ventas.getIva())).isEqualByComparingTo(ventas.getTotal());
+
+        // un día sin ventas: COALESCE devuelve 0 en lugar de null
+        VentasPorDiaDto sinVentas = pedidoRepositorio.obtenerVentasDia(LocalDate.of(2000, 1, 1));
+        assertThat(sinVentas.getNumeroPedidos()).isZero();
+        assertThat(sinVentas.getTotal()).isEqualByComparingTo("0");
     }
 
-    // ===================== CUPONES =====================
+    // CUPONES
 
     // RN-06: búsqueda y existencia por código sin distinguir mayúsculas; usos sin contar cancelados
     @Test
@@ -253,7 +250,7 @@ class CafeteriaApplicationTest {
                 .isEqualTo(2);
     }
 
-    // ===================== USUARIOS =====================
+    // USUARIOS
 
     // Login y registro: el mail es el nombre de usuario y no distingue mayúsculas
     @Test

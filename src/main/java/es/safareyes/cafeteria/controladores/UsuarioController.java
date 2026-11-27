@@ -1,8 +1,8 @@
 package es.safareyes.cafeteria.controladores;
 
-import es.safareyes.cafeteria.dtos.LoginDto;
-import es.safareyes.cafeteria.dtos.LoginResponse;
-import es.safareyes.cafeteria.dtos.UsuarioDTO;
+import es.safareyes.cafeteria.dtos.request.LoginDto;
+import es.safareyes.cafeteria.dtos.response.LoginResponse;
+import es.safareyes.cafeteria.dtos.request.UsuarioDTO;
 import es.safareyes.cafeteria.servicios.UsuarioService;
 import jakarta.validation.Valid;
 import lombok.AllArgsConstructor;

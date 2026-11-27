@@ -1,10 +1,12 @@
 package es.safareyes.cafeteria.repositorios;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
+import es.safareyes.cafeteria.dtos.response.VentasPorDiaDto;
 import es.safareyes.cafeteria.modelos.EstadoPedido;
 import es.safareyes.cafeteria.modelos.Pedido;
 import org.springframework.data.jpa.repository.EntityGraph;
@@ -46,21 +48,26 @@ public interface IPedidoRepositorio extends JpaRepository<Pedido, UUID> {
                                       @Param("hasta") LocalDateTime hasta,
                                       Pageable pageable);
 
-    List<Pedido> findByCliente_IdClienteAndEstadoAndFechaBetween(
-            UUID clienteId,
-            EstadoPedido estado,
-            LocalDateTime fechaInicio,
-            LocalDateTime fechaFin
-    );
-
     /** RN-09: pedidos creados desde el inicio del día */
     long countByFechaGreaterThanEqual(LocalDateTime inicioDia);
 
     /** RN-06: usos de un cupón (los pedidos cancelados no cuentan, RN-08) */
     long countByCupon_IdCuponAndEstadoNot(UUID idCupon, EstadoPedido estado);
 
-    /** RN-10: pedidos de un día en un estado */
-    List<Pedido> findByEstadoAndFechaGreaterThanEqualAndFechaLessThan(EstadoPedido estado,
-                                                                      LocalDateTime inicio,
-                                                                      LocalDateTime fin);
+    /**
+     * RF-07 / RN-10 (Q3): ventas de un día con SQL nativo. Solo cuentan los pedidos ENTREGADO.
+     * DATE_TRUNC('day', fecha) quita la hora para comparar con el día pedido y COALESCE devuelve 0
+     * en lugar de null cuando ese día no hay ventas. Los alias van entre comillas para que PostgreSQL
+     * respete las mayúsculas y coincidan con los getters de VentasPorDiaDto.
+     */
+    @Query(value = """
+        SELECT COUNT(*)                          AS "numeroPedidos",
+               COALESCE(SUM(total), 0)           AS "total",
+               COALESCE(SUM(base_imponible), 0)  AS "base",
+               COALESCE(SUM(cuota_iva), 0)       AS "iva"
+        FROM pedido
+        WHERE estado = 'ENTREGADO'
+          AND DATE_TRUNC('day', fecha) = :fecha
+    """, nativeQuery = true)
+    VentasPorDiaDto obtenerVentasDia(@Param("fecha") LocalDate fecha);
 }

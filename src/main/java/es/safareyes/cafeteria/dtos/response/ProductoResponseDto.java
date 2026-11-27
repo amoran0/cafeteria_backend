@@ -1,4 +1,4 @@
-package es.safareyes.cafeteria.dtos;
+package es.safareyes.cafeteria.dtos.response;
 
 import java.math.BigDecimal;
 import java.util.List;

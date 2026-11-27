@@ -1,7 +1,7 @@
 package es.safareyes.cafeteria.servicios;
 
-import es.safareyes.cafeteria.dtos.PedidoRequestDto;
-import es.safareyes.cafeteria.dtos.PedidoResponseDto;
+import es.safareyes.cafeteria.dtos.request.PedidoRequestDto;
+import es.safareyes.cafeteria.dtos.response.PedidoResponseDto;
 import es.safareyes.cafeteria.excepciones.ElementoNoEncontrado;
 import es.safareyes.cafeteria.excepciones.ReglaNegocioException;
 import es.safareyes.cafeteria.integracion.FitZoneClient;

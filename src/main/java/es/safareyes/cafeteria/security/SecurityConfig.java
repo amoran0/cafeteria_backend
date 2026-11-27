@@ -3,6 +3,7 @@ package es.safareyes.cafeteria.security;
 import es.safareyes.cafeteria.servicios.UsuarioService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -37,7 +38,8 @@ public class SecurityConfig {
     @Bean
     SecurityFilterChain cadenaApi(HttpSecurity http,
                                   UsuarioService service,
-                                  JWTService jwtService) throws Exception {
+                                  JWTService jwtService,
+                                  @Value("${integracion.api-key}") String apiKey) throws Exception {
         return http
                 .csrf(csrf -> csrf.disable())
                 .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
@@ -49,6 +51,9 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, "/api/v1/auth/registro", "/api/v1/auth/login").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/categorias").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/productos", "/api/v1/productos/*").permitAll()
+
+                        // INTEGRACIÓN: sin JWT; la cabecera X-API-KEY la comprueba ApiKeyFilter
+                        .requestMatchers("/api/v1/integracion/**").permitAll()
 
                         // ADMIN o BARISTA: agotar/reponer y hacer avanzar los pedidos
                         .requestMatchers(HttpMethod.PATCH, "/api/v1/categorias/*/disponibilidad").hasAnyRole("ADMIN", "BARISTA")
@@ -63,7 +68,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/v1/informes/ventas-dia").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.GET, "/api/v1/informes/productos-top").hasRole("ADMIN")
 
-                        //BARISTA o CLIENTE: crear pedidos (en barra o desde la app) =====
+                        //BARISTA o CLIENTE: crear pedidos (en barra o desde la app)
                         .requestMatchers(HttpMethod.POST, "/api/v1/pedidos").hasAnyRole("BARISTA", "CLIENTE")
 
                         //CUALQUIER USUARIO LOGUEADO
@@ -81,6 +86,8 @@ public class SecurityConfig {
                         .accessDeniedHandler((peticion, respuesta, ex) -> responder(peticion, respuesta,
                                 HttpStatus.FORBIDDEN, "Acceso denegado",
                                 "Tu rol no tiene permiso para esta operación")))
+                .addFilterBefore(new ApiKeyFilter(apiKey),
+                                 UsernamePasswordAuthenticationFilter.class)
                 .addFilterBefore(new JWTFilter(jwtService, service),
                                  UsernamePasswordAuthenticationFilter.class)
                 .build();
@@ -89,12 +96,13 @@ public class SecurityConfig {
     /**
      * Los errores de seguridad se producen en los filtros, antes de llegar a los controladores, así que no pasan por
      * ErrorGlobalController: se escribe aquí el mismo formato ProblemDetail (type, title, status, detail, instance, timestamp).
+     * Lo usan este fichero y ApiKeyFilter (por eso no es private).
      * El mixin hace que "timestamp" salga al mismo nivel que title o status, igual que en ErrorGlobalController.
      */
     private static final JsonMapper MAPPER = JsonMapper.builder()
             .addMixIn(ProblemDetail.class, ProblemDetailJacksonMixin.class).build();
 
-    private static void responder(HttpServletRequest peticion, HttpServletResponse respuesta, HttpStatus estado,
+    static void responder(HttpServletRequest peticion, HttpServletResponse respuesta, HttpStatus estado,
                                   String titulo, String detalle) throws IOException {
         ProblemDetail problema = ProblemDetail.forStatusAndDetail(estado, detalle);
         problema.setTitle(titulo);

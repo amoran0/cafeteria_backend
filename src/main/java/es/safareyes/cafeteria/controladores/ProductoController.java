@@ -1,9 +1,10 @@
 package es.safareyes.cafeteria.controladores;
 
-import es.safareyes.cafeteria.dtos.DisponibilidadRequestDto;
-import es.safareyes.cafeteria.dtos.ProductoCartaVista;
-import es.safareyes.cafeteria.dtos.ProductoRequestDto;
-import es.safareyes.cafeteria.dtos.ProductoResponseDto;
+import es.safareyes.cafeteria.dtos.request.DisponibilidadRequestDto;
+import es.safareyes.cafeteria.dtos.request.ProductoActualizacionDto;
+import es.safareyes.cafeteria.dtos.response.ProductoCartaVista;
+import es.safareyes.cafeteria.dtos.request.ProductoRequestDto;
+import es.safareyes.cafeteria.dtos.response.ProductoResponseDto;
 import jakarta.validation.Valid;
 import lombok.AllArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -50,7 +51,7 @@ public class ProductoController {
     }
 
     @PutMapping("/{id}")
-    public ProductoResponseDto modificar(@PathVariable UUID id, @Valid @RequestBody ProductoRequestDto dto) {
+    public ProductoResponseDto modificar(@PathVariable UUID id, @Valid @RequestBody ProductoActualizacionDto dto) {
         return productoService.modificarProducto(id, dto);
     }
 

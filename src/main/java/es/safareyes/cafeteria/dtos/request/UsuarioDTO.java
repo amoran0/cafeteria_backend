@@ -1,4 +1,4 @@
-package es.safareyes.cafeteria.dtos;
+package es.safareyes.cafeteria.dtos.request;
 
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;

@@ -1,4 +1,4 @@
-package es.safareyes.cafeteria.dtos;
+package es.safareyes.cafeteria.dtos.response;
 
 import es.safareyes.cafeteria.modelos.TipoCupon;
 

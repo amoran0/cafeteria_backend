@@ -3,7 +3,7 @@ package es.safareyes.cafeteria.repositorios;
 import java.util.List;
 import java.util.UUID;
 
-import es.safareyes.cafeteria.dtos.CategoriasActivos;
+import es.safareyes.cafeteria.dtos.response.CategoriasActivos;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
@@ -14,7 +14,7 @@ import es.safareyes.cafeteria.modelos.Categoria;
 public interface ICategoriaRepositorio extends JpaRepository<Categoria, UUID> {
 
     @Query("""
-        SELECT new es.safareyes.cafeteria.dtos.CategoriasActivos(
+        SELECT new es.safareyes.cafeteria.dtos.response.CategoriasActivos(
             c.idCategoria,
             c.nombre,
             c.disponible,

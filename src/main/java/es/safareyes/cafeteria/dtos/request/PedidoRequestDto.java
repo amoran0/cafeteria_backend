@@ -1,5 +1,6 @@
-package es.safareyes.cafeteria.dtos;
+package es.safareyes.cafeteria.dtos.request;
 
+import es.safareyes.cafeteria.validaciones.DniValido;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
@@ -15,7 +16,7 @@ public record PedidoRequestDto(
         UUID clienteId,
         @NotEmpty(message = "El pedido debe tener líneas") List<@Valid Linea> lineas,
         String codigoCupon,
-        String dniSocio
+        @DniValido String dniSocio   // opcional: solo para el descuento de socio FitZone
 ) {
     public record Linea(
             @NotNull(message = "El producto es obligatorio") UUID productoId,

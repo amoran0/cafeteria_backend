@@ -1,9 +1,9 @@
 package es.safareyes.cafeteria.controladores;
 
-import es.safareyes.cafeteria.dtos.CuponRequestDto;
-import es.safareyes.cafeteria.dtos.CuponResponseDto;
-import es.safareyes.cafeteria.dtos.CuponValidacionRequestDto;
-import es.safareyes.cafeteria.dtos.CuponValidacionResponseDto;
+import es.safareyes.cafeteria.dtos.request.CuponRequestDto;
+import es.safareyes.cafeteria.dtos.response.CuponResponseDto;
+import es.safareyes.cafeteria.dtos.request.CuponValidacionRequestDto;
+import es.safareyes.cafeteria.dtos.response.CuponValidacionResponseDto;
 import jakarta.validation.Valid;
 import lombok.AllArgsConstructor;
 import org.springframework.http.ResponseEntity;

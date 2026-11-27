@@ -1,36 +1,26 @@
 package es.safareyes.cafeteria.servicios;
 
-import es.safareyes.cafeteria.dtos.ProducotsMasVendidos;
-import es.safareyes.cafeteria.dtos.VentasPorDiaDto;
+import es.safareyes.cafeteria.dtos.response.ProducotsMasVendidos;
+import es.safareyes.cafeteria.dtos.response.VentasPorDiaDto;
 import lombok.AllArgsConstructor;
-import es.safareyes.cafeteria.modelos.EstadoPedido;
-import es.safareyes.cafeteria.modelos.Pedido;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import es.safareyes.cafeteria.repositorios.IPedidoRepositorio;
 import es.safareyes.cafeteria.repositorios.IProductoRepositorio;
 
-import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
-import java.util.function.Function;
 
-/** RF-07 / RN-10: solo cuentan los pedidos ENTREGADO */
+/** RF-07 / RN-10: solo cuentan los pedidos ENTREGADO (lo filtran las consultas nativas) */
 @Service
 @AllArgsConstructor
+@Transactional(readOnly = true)
 public class InformeService {
     private IPedidoRepositorio pedidoRepositorio;
     private IProductoRepositorio productoRepositorio;
 
-    @Transactional(readOnly = true)
     public VentasPorDiaDto ventasDia(LocalDate fecha) {
-        List<Pedido> pedidos = pedidoRepositorio.findByEstadoAndFechaGreaterThanEqualAndFechaLessThan(
-                EstadoPedido.ENTREGADO, fecha.atStartOfDay(), fecha.plusDays(1).atStartOfDay());
-        return new VentasPorDiaDto(
-                (long) pedidos.size(),
-                sumar(pedidos, Pedido::getTotal),
-                sumar(pedidos, Pedido::getBaseImponible),
-                sumar(pedidos, Pedido::getCuotaIva));
+        return pedidoRepositorio.obtenerVentasDia(fecha);
     }
 
     public List<ProducotsMasVendidos> productosTop(LocalDate desde, LocalDate hasta, int limite) {
@@ -40,10 +30,6 @@ public class InformeService {
         if (hasta.isBefore(desde)) {
             throw new IllegalArgumentException("La fecha 'hasta' no puede ser anterior a la fecha 'desde'");
         }
-        return productoRepositorio.obtenerProductosTop(desde.atStartOfDay(), hasta.plusDays(1).atStartOfDay(), limite);
-    }
-
-    private BigDecimal sumar(List<Pedido> pedidos, Function<Pedido, BigDecimal> importe) {
-        return pedidos.stream().map(importe).reduce(BigDecimal.ZERO, BigDecimal::add);
+        return productoRepositorio.obtenerProductosTop(desde, hasta, limite);
     }
 }

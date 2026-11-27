@@ -1,7 +1,7 @@
 package es.safareyes.cafeteria.controladores;
 
-import es.safareyes.cafeteria.dtos.ProducotsMasVendidos;
-import es.safareyes.cafeteria.dtos.VentasPorDiaDto;
+import es.safareyes.cafeteria.dtos.response.ProducotsMasVendidos;
+import es.safareyes.cafeteria.dtos.response.VentasPorDiaDto;
 import lombok.AllArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;

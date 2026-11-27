@@ -236,12 +236,10 @@ INSERT INTO pedido_producto (id_pedido, id_producto, cantidad, precio_unitario) 
 ('b1eebc99-9c0b-4ef8-bb6d-6bb9bd380a10', 'f0eebc99-9c0b-4ef8-bb6d-6bb9bd380a01', 2, 1.50);
 
 
--- =====================================================================
 -- 10. Datos adicionales (50 filas)
 --     4 alérgenos + 12 productos + 13 producto_alergeno + 5 usuarios
 --     + 4 clientes + 2 cupones + 4 pedidos + 6 líneas
 --     Los pedidos nuevos son de otros días: el 04/10 sigue con sus 10 pedidos.
--- =====================================================================
 
 -- 10.1 Alérgenos que faltaban para completar los 14 de declaración obligatoria (4)
 INSERT INTO alergeno (id_alergeno, nombre) VALUES
@@ -323,9 +321,7 @@ INSERT INTO pedido_producto (id_pedido, id_producto, cantidad, precio_unitario) 
 ('b1eebc99-9c0b-4ef8-bb6d-6bb9bd380a14', 'f0eebc99-9c0b-4ef8-bb6d-6bb9bd380a02', 1, 1.80);
 
 
--- =====================================================================
 -- 11. Ampliación de la carta: 30 productos (3 por categoría) y sus alérgenos
--- =====================================================================
 INSERT INTO producto (id_producto, id_categoria, nombre, descripcion, precio_base, precio_venta, disponible, activa, iva) VALUES
 -- Cafés Clásicos
 ('f0eebc99-9c0b-4ef8-bb6d-6bb9bd380a23', 'e0eebc99-9c0b-4ef8-bb6d-6bb9bd380a01', 'Café Cortado', 'Espresso con un toque de leche', 0.45, 1.60, TRUE, TRUE, 10),

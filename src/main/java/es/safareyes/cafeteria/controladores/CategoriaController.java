@@ -1,8 +1,8 @@
 package es.safareyes.cafeteria.controladores;
 
-import es.safareyes.cafeteria.dtos.CategoriaResponseDto;
-import es.safareyes.cafeteria.dtos.CategoriasActivos;
-import es.safareyes.cafeteria.dtos.DisponibilidadRequestDto;
+import es.safareyes.cafeteria.dtos.response.CategoriaResponseDto;
+import es.safareyes.cafeteria.dtos.response.CategoriasActivos;
+import es.safareyes.cafeteria.dtos.request.DisponibilidadRequestDto;
 import jakarta.validation.Valid;
 import lombok.AllArgsConstructor;
 import org.springframework.web.bind.annotation.*;

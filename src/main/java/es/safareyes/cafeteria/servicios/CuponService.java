@@ -1,8 +1,8 @@
 package es.safareyes.cafeteria.servicios;
 
-import es.safareyes.cafeteria.dtos.CuponRequestDto;
-import es.safareyes.cafeteria.dtos.CuponResponseDto;
-import es.safareyes.cafeteria.dtos.CuponValidacionResponseDto;
+import es.safareyes.cafeteria.dtos.request.CuponRequestDto;
+import es.safareyes.cafeteria.dtos.response.CuponResponseDto;
+import es.safareyes.cafeteria.dtos.response.CuponValidacionResponseDto;
 import es.safareyes.cafeteria.excepciones.ElementoDuplicado;
 import es.safareyes.cafeteria.excepciones.ElementoNoEncontrado;
 import es.safareyes.cafeteria.excepciones.ReglaNegocioException;

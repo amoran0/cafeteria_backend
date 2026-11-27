@@ -1,9 +1,9 @@
 package es.safareyes.cafeteria.servicios;
 
 import es.safareyes.cafeteria.conversores.UsuarioMapper;
-import es.safareyes.cafeteria.dtos.LoginDto;
-import es.safareyes.cafeteria.dtos.LoginResponse;
-import es.safareyes.cafeteria.dtos.UsuarioDTO;
+import es.safareyes.cafeteria.dtos.request.LoginDto;
+import es.safareyes.cafeteria.dtos.response.LoginResponse;
+import es.safareyes.cafeteria.dtos.request.UsuarioDTO;
 import es.safareyes.cafeteria.excepciones.CredencialesIncorrectas;
 import es.safareyes.cafeteria.excepciones.ElementoDuplicado;
 import es.safareyes.cafeteria.excepciones.ReglaNegocioException;

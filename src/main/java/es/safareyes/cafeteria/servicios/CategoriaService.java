@@ -1,8 +1,8 @@
 package es.safareyes.cafeteria.servicios;
 
 import es.safareyes.cafeteria.conversores.CategoriaMapper;
-import es.safareyes.cafeteria.dtos.CategoriaResponseDto;
-import es.safareyes.cafeteria.dtos.CategoriasActivos;
+import es.safareyes.cafeteria.dtos.response.CategoriaResponseDto;
+import es.safareyes.cafeteria.dtos.response.CategoriasActivos;
 import es.safareyes.cafeteria.excepciones.ElementoNoEncontrado;
 import lombok.AllArgsConstructor;
 import es.safareyes.cafeteria.modelos.Categoria;

@@ -1,8 +1,8 @@
 package es.safareyes.cafeteria.controladores;
 
-import es.safareyes.cafeteria.dtos.EstadoPedidoRequestDto;
-import es.safareyes.cafeteria.dtos.PedidoRequestDto;
-import es.safareyes.cafeteria.dtos.PedidoResponseDto;
+import es.safareyes.cafeteria.dtos.request.EstadoPedidoRequestDto;
+import es.safareyes.cafeteria.dtos.request.PedidoRequestDto;
+import es.safareyes.cafeteria.dtos.response.PedidoResponseDto;
 import es.safareyes.cafeteria.modelos.Usuario;
 import jakarta.validation.Valid;
 import lombok.AllArgsConstructor;
